@@ -15,10 +15,12 @@
 		species: {
 			services: [],
 			rule: {
+				primary_key: 'name',
 				head: [
-					{key: 'name', type: String.name},
-					{key: 'description', type: String.name},
-					{key: 'create_dt', type: Date.name}
+					{key: 'name', type: String.name, edit: ['input', {type: 'text', pattern: '^[\\w\\d_]+$'}]},
+					{key: 'description', type: String.name, edit: ['input', {type: 'text', pattern: '^.*$'}]},
+					{key: 'create_dt', type: Date.name},
+					{key: 'update_dt', type: Date.name, hide: true}
 				],
 				create: true
 			}
@@ -52,7 +54,35 @@
 				res.send(JSON.stringify(data));
 			});
 		} else res.send(JSON.stringify(data));
+	}).post(/create$/i, (req, res) => {
+		let route = JSON.parse(req.body.route),
+			data = route.reduce((a, b) => a[b], router),
+			props = JSON.parse(req.body.props);
+		if (data.rule) {
+			let session = neo4j_driver.session();
+			session.run(`match (:BSCHA)${route.map(service => `-[:static]->(:${service})`).join('')}-[:dynamic]->(n) where n.${data.rule.primary_key}='${props[data.rule.primary_key]}' return n`).then(({records}) => {
+				if (records.length) {
+					session.close();
+					res.send(JSON.stringify({
+						success: false,
+						message: `创建失败：${data.rule.primary_key} 为 ${props[data.rule.primary_key]} 的记录已存在`
+					}));
+				} else {
+					let current_dt = Math.floor(Date.now() / 1000);
+					session.run(`match (:BSCHA)${route.slice(0, route.length - 1).map(service => `-[:static]->(:${service})`).join('')}-[:static]->(n:${route[route.length - 1]}) create (n)-[:dynamic]->(:instance${JSON.stringify(Object.assign(props, {
+						create_dt: current_dt,
+						update_dt: current_dt
+					})).replace(/\"([^\"]+)\"\:/g, '$1:')})`).then(() => {
+						session.close();
+						res.send(JSON.stringify({
+							success: true
+						}));
+					});
+
+				}
+			});
+		}
 	}).listen(3530, () => {
-		console.log('BSCHA listening on port 3530!');
+		console.log('BSCHA listening on port 3530...');
 	});
 });
