@@ -82,6 +82,19 @@
 				}
 			});
 		}
+	}).post(/delete$/i, (req, res) => {
+		let route = JSON.parse(req.body.route),
+			ids = JSON.parse(req.body.identities);
+		if (ids.length) {
+			let session = neo4j_driver.session();
+			let t = 0;
+			for (let id of ids) session.run(`match (:BSCHA)${route.map(service => `-[:static]->(:${service})`).join('')}-[r:dynamic]->(n) where id(n)=${id} delete r,n`).then(() => {
+				if (++t == ids.length) {
+					session.close();
+					res.send('null');
+				}
+			});
+		}
 	}).listen(3530, () => {
 		console.log('BSCHA listening on port 3530...');
 	});

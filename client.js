@@ -206,8 +206,27 @@
 						})),
 						...data.rule.head.filter(field => !field.hide).map(field => $('<th/>', {
 							scope: 'col'
-						}).text(dictionary[field.key]))
-					]))).append($('<tbody/>').append(data.rule.records.map(record => $('<tr/>').append([
+						}).text(dictionary[field.key])),
+						$('<th/>', {
+							scope: 'col'
+						}).append($('<a/>').css({
+							cursor: 'pointer',
+							color: 'red',
+							whiteSpace: 'nowrap'
+						}).text('删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
+							let $checked=$(tbody).find('input:checkbox:checked');
+							if ($checked.length && confirm('确定删除选定的记录？')) {
+								$('#requesting_mask').show();
+								$.post('delete', {
+									route: JSON.stringify(state.route),
+									identities: JSON.stringify(Array.from($checked).map(cb=>$(cb).parents('tr:first').data('id')))
+								}, () => {
+									$('#requesting_mask').hide();
+									location.href = location.href;
+								});
+							}
+						})))
+					]))).append($('<tbody/>').append(data.rule.records.map(record => $('<tr/>').data('id', record.identity.low).append([
 						$('<td/>').append($('<input/>', {
 							type: 'checkbox'
 						})),
@@ -217,7 +236,23 @@
 									record.properties[field.key].low :
 									record.properties[field.key]
 							)
-						))
+						)),
+						$('<td/>').append($('<a/>').css({
+							cursor: 'pointer',
+							color: 'red',
+							whiteSpace: 'nowrap'
+						}).text('删除').click(e => {
+							if (confirm('确定删除这条记录？')) {
+								$('#requesting_mask').show();
+								$.post('delete', {
+									route: JSON.stringify(state.route),
+									identities: JSON.stringify([$(e.target).parents('tr:first').data('id')])
+								}, () => {
+									$('#requesting_mask').hide();
+									location.href = location.href;
+								});
+							}
+						})),
 					]))).self(tbody => {
 						if (data.rule.create) {
 							$(tbody).append($('<tr/>').append([
