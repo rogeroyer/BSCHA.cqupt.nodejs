@@ -4,15 +4,16 @@
 	$(() => {
 		let state_merge = (() => {
 				try {
-					return JSON.parse(unescape(location.href.match(/(?<=\?).*$/)[0]));
+					return JSON.parse(unescape(location.href).match(/(?<=\?).*$/)[0]);
 				} catch (e) {
 					return undefined;
 				}
 			})(),
 			state = {
-				pwd: []
+				route: []
 			},
 			dictionary;
+		Object.assign(state, state_merge);
 		$.post('query/dictionary', {}, dict => dictionary = JSON.parse(dict));
 
 		$('html').css({
@@ -107,17 +108,28 @@
 			}).append([
 				$('<div/>').css({
 					marginLeft: '.75rem'
-				}).append([
-					$('<a/>', {
+				}).append($('<a/>').text('Home').self(a => {
+					if (state.route.length) $(a).attr({
 						href: '/'
-					}).text('Home')
-				]),
+					});
+				})).self(div => {
+					for (let i in state.route) {
+						$(div).append([
+							$('<span/>').text(' / '),
+							$('<a/>').text(state.route[i]).self(a => {
+								if (i < state.route.length - 1) $(a).attr({
+									href: state.slice(0, i)
+								});
+							})
+						]);
+					}
+				}),
 				$('<div/>', {
 					class: 'dropdown'
 				}).css({
 					marginLeft: '.75rem'
-				}).append([
-					$('<button/>', {
+				}).self((div) => {
+					$(div).append($('<button/>', {
 						type: 'button',
 						class: 'btn btn-primary dropdown-toggle',
 						'data-toggle': 'dropdown',
@@ -125,24 +137,8 @@
 						'aria-expanded': 'false'
 					}).one('click', (e) => setTimeout(() => {
 						$(e.target).trigger('click')
-					}, 0)),
-					$('<div/>', {
-						class: 'dropdown-menu'
-					}).self((div) => {
-						$.post('query/service', {}, (data) => {
-							$(div).append(JSON.parse(data).map((label) => $('<a/>', {
-								class: 'dropdown-item'
-							}).css({
-								cursor: 'pointer'
-							}).text(dictionary[label]).click(() => {
-								$.post(`service/query/${label}`, {}, (data) => {
-									data = JSON.parse(data);
-									render(data);
-								});
-							})));
-						});
-					})
-				])
+					}, 0)));
+				})
 			]);
 			$(root).$frame('foot').css({
 				display: 'flex',
@@ -157,42 +153,115 @@
 			])
 		});
 
-		const render = data => {
-			$('body').$frame('root main main main').html('').append([
-				$('<table/>', {
-					class: 'table'
-				}).append($('<thead/>').append($('<tr/>').append([
-					$('<th/>', {
-						scope: 'col'
-					}).append($('<input/>', {
-						type: 'checkbox',
-						name: 'all'
-					})).append($('<input/>', {
-						type: 'checkbox',
-						name: 'opp'
-					})),
-					...data.head.map(field => $('<th/>', {
-						scope: 'col'
-					}).text(dictionary[field.key]))
-				]))).append($('<tbody/>').append(data.records.map(record => $('<tr/>').append([
-					$('<td/>').append($('<input/>', {
-						type: 'checkbox'
-					})),
-					...data.head.map(field => $('<td/>').text(field.type === Date.name ?
-						new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
-						(field.type === Number.name ?
-								record.properties[field.key].low :
-								record.properties[field.key]
-						)
-					))
-				]))).self(tbody => {
-					if (data.create) {
-						$(tbody).append($('<tr/>').append($('<td/>', {
-							colspan: 99
-						})))
-					}
-				}))
-			]);
-		};
+		$.post('query', {
+			route: JSON.stringify(state.route)
+		}, data => {
+			data = JSON.parse(data);
+			$('body').$frame('root main main navigator').children('div.dropdown').self((div) => {
+				if (data.services.length) {
+					$(div).append($('<div/>', {
+						class: 'dropdown-menu'
+					}).append(data.services.map((service) => $('<a/>', {
+						class: 'dropdown-item'
+					}).css({
+						cursor: 'pointer'
+					}).text(dictionary[service]).click(() => {
+						location.href = `?${JSON.stringify({
+							route: [...state.route, service]
+						})}`;
+					}))));
+				} else $(div).children('button').prop({
+					disabled: true
+				}).hide();
+			});
+			if (data.rule) {
+				$('body').$frame('root main main main').html('').append([
+					$('<table/>', {
+						class: 'table'
+					}).append($('<thead/>').append($('<tr/>').append([
+						$('<th/>', {
+							scope: 'col'
+						}).append($('<input/>', {
+							type: 'checkbox',
+							name: 'all'
+						})).append($('<input/>', {
+							type: 'checkbox',
+							name: 'opp'
+						})),
+						...data.rule.head.map(field => $('<th/>', {
+							scope: 'col'
+						}).text(dictionary[field.key]))
+					]))).append($('<tbody/>').append(data.rule.records.map(record => $('<tr/>').append([
+						$('<td/>').append($('<input/>', {
+							type: 'checkbox'
+						})),
+						...data.rule.head.map(field => $('<td/>').text(field.type === Date.name ?
+							new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
+							(field.type === Number.name ?
+									record.properties[field.key].low :
+									record.properties[field.key]
+							)
+						))
+					]))).self(tbody => {
+						if (data.rule.create) {
+							$(tbody).append($('<tr/>').append($('<td/>', {
+								colspan: 99
+							}).append($('<button/>', {
+								type: 'button',
+								class: 'btn btn-secondary'
+							}).text('创建').click(() => {
+
+							}))))
+						}
+					}))
+				]);
+			}
+		});
+
+		// if (state.route.length) {
+		// 	$.post(['service', ...state.route.slice(0, state.route.length - 1), 'query', state.route[state.route.length - 1]].join('/'), {}, (data) => {
+		// 		data = JSON.parse(data);
+		// 		$('body').$frame('root main main main').html('').append([
+		// 			$('<table/>', {
+		// 				class: 'table'
+		// 			}).append($('<thead/>').append($('<tr/>').append([
+		// 				$('<th/>', {
+		// 					scope: 'col'
+		// 				}).append($('<input/>', {
+		// 					type: 'checkbox',
+		// 					name: 'all'
+		// 				})).append($('<input/>', {
+		// 					type: 'checkbox',
+		// 					name: 'opp'
+		// 				})),
+		// 				...data.head.map(field => $('<th/>', {
+		// 					scope: 'col'
+		// 				}).text(dictionary[field.key]))
+		// 			]))).append($('<tbody/>').append(data.records.map(record => $('<tr/>').append([
+		// 				$('<td/>').append($('<input/>', {
+		// 					type: 'checkbox'
+		// 				})),
+		// 				...data.head.map(field => $('<td/>').text(field.type === Date.name ?
+		// 					new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
+		// 					(field.type === Number.name ?
+		// 							record.properties[field.key].low :
+		// 							record.properties[field.key]
+		// 					)
+		// 				))
+		// 			]))).self(tbody => {
+		// 				if (data.create) {
+		// 					$(tbody).append($('<tr/>').append($('<td/>', {
+		// 						colspan: 99
+		// 					}).append($('<button/>', {
+		// 						type: 'button',
+		// 						class: 'btn btn-secondary'
+		// 					}).text('创建').click(() => {
+		//
+		// 					}))))
+		// 				}
+		// 			}))
+		// 		]);
+		// 	});
+		// }
 	});
 })();
