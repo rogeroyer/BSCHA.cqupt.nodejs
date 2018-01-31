@@ -1,0 +1,27 @@
+{
+  "name": "bscha.cqupt.nodejs",
+  "version": "1.0.0",
+  "description": "asdf",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ai-artisan/BSCHA.cqupt.nodejs.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ai-artisan/BSCHA.cqupt.nodejs/issues"
+  },
+  "homepage": "https://github.com/ai-artisan/BSCHA.cqupt.nodejs#readme",
+  "dependencies": {
+    "bootstrap": "^4.0.0",
+    "express": "^4.16.2",
+    "jquery": "^3.3.1",
+    "neo4j-driver": "^1.5.3",
+    "popper.js": "^1.12.9",
+    "reset-css": "^2.2.1"
+  }
+}
