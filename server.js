@@ -6,7 +6,7 @@
 		neo4j = require('neo4j-driver').v1,
 		neo4j_driver = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha'));
 
-	let router = {
+	const router = {
 		services: [
 			'species',
 			'training',
@@ -22,6 +22,7 @@
 					{key: 'create_dt', type: Date.name},
 					{key: 'update_dt', type: Date.name, hide: true}
 				],
+				delete: true,
 				create: true
 			}
 		},
@@ -78,7 +79,6 @@
 							success: true
 						}));
 					});
-
 				}
 			});
 		}

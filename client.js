@@ -14,7 +14,9 @@
 			},
 			dictionary;
 		Object.assign(state, state_merge);
+		$.ajaxSetup({async: false});
 		$.post('query/dictionary', {}, dict => dictionary = JSON.parse(dict));
+		$.ajaxSetup({async: true});
 
 		$('html').css({
 			height: '100%'
@@ -124,7 +126,7 @@
 					for (let i in state.route) {
 						$(div).append([
 							$('<span/>').text(' / '),
-							$('<a/>').text(state.route[i]).self(a => {
+							$('<a/>').text(dictionary[state.route[i]]).self(a => {
 								if (i < state.route.length - 1) $(a).attr({
 									href: state.slice(0, i)
 								});
@@ -189,12 +191,18 @@
 					}).append($('<thead/>').append($('<tr/>').append([
 						$('<th/>', {
 							scope: 'col'
-						}).append($('<input/>', {
-							type: 'checkbox',
-							name: 'all'
-						})).append($('<input/>', {
-							type: 'checkbox',
-							name: 'opp'
+						}).append($('<a/>').css({
+							cursor: 'pointer'
+						}).text('A').click(e => $(e.target).parents('table:first').children('tbody').find('input:checkbox').prop({
+							checked: true
+						}))).append('/').append($('<a/>').css({
+							cursor: 'pointer'
+						}).text('O').click(e => {
+							for (let cb of Array.from($(e.target).parents('table:first').children('tbody').find('input:checkbox'))) {
+								$(cb).prop({
+									checked: !$(cb).prop('checked')
+								});
+							}
 						})),
 						...data.rule.head.filter(field => !field.hide).map(field => $('<th/>', {
 							scope: 'col'
