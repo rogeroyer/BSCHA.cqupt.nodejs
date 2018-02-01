@@ -11,6 +11,7 @@
 		species: {
 			services: [],
 			table: {
+				referred: true,
 				head: [
 					{key: 'name', primary: true, output: String.name, input: ['input', {type: 'text'}]},
 					{key: 'description', output: String.name, input: ['input', {type: 'text'}]},
@@ -23,7 +24,7 @@
 			services: [],
 			table: {
 				head: [
-					{key: 'species', output: String.name, input: ['select', {type: Symbol.name, route: ['species'], key: 'name'}]},
+					{key: 'species', output: 'refer', input: ['refer', {route: ['species'], key: 'name'}]},
 					{key: 'data', output: [String.name, {long: true}], input: 'textarea'},
 					{key: 'update_dt', output: Date.name},
 					{key: 'create_dt', output: Date.name}
@@ -49,12 +50,13 @@
 			update_dt: '修改时间'
 		}));
 	}).post(/query$/i, (req, res) => {
-		let route = JSON.parse(req.body.route),
-			data = route.reduce((a, b) => a[b], router);
+		let {route, identity = null} = req.body;
+		route = JSON.parse(route);
+		let data = route.reduce((a, b) => a[b], router);
 		if (data.table) {
 			let session = neo4j_driver.session();
 			session.run(`match (:root{name:'BSCHA'})${route.slice(0, route.length - 1).map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:specialize]->(n:class{name:'${route[route.length - 1]}'}) return n`).then(({records: [service]}) => {
-				session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) return n`).then(({records}) => {
+				session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) ${identity ? `where id(n)=${identity}` : ''} return n`).then(({records}) => {
 					session.close();
 					data.table.service = service._fields[0];
 					data.table.records = records.map(record => record._fields[0]);
@@ -69,7 +71,7 @@
 		if (data.table) {
 			let session = neo4j_driver.session(),
 				checks = [], errors = [], t = 0,
-				callback = () => {
+				mission = () => {
 					let current_dt = Math.floor(Date.now() / 1000);
 					session.run(`match (:root{name:'BSCHA'})${route.slice(0, route.length - 1).map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:specialize]->(n:class{name:'${route[route.length - 1]}'}) create (n)-[:implement]->(:instance${JSON.stringify(Object.assign(properties, {
 						create_dt: current_dt,
@@ -92,26 +94,30 @@
 									success: false,
 									message: `创建失败：\n${errors.join('\n')}`
 								}));
-							} else callback();
+							} else mission();
 						}
 					});
 				});
 			});
-			if (!checks.length) callback();
+			if (!checks.length) mission();
 			else for (let check of checks) check();
 		}
 	}).post(/delete$/i, (req, res) => {
 		let route = JSON.parse(req.body.route),
+			data = route.reduce((a, b) => a[b], router),
 			ids = JSON.parse(req.body.identities);
 		if (ids.length) {
-			let session = neo4j_driver.session();
-			let t = 0;
-			for (let id of ids) session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n)=${id} delete r,n`).then(() => {
-				if (++t == ids.length) {
-					session.close();
-					res.send(null);
-				}
-			});
+			let session = neo4j_driver.session(),
+				t = 0;
+			for (let id of ids){
+				// console.log(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n)=${id}`);
+				session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n)=${id} delete r,n`).then(() => {
+					if (++t == ids.length) {
+						session.close();
+						res.send(null);
+					}
+				});
+			}
 		}
 	}).post(/modify\/pattern$/i, (req, res) => {
 		let session = neo4j_driver.session();
@@ -130,7 +136,7 @@
 		if (data.table) {
 			let session = neo4j_driver.session(),
 				rule = data.table.head.find((rule) => rule.key === req.body.key),
-				callback = () => {
+				mission = () => {
 					session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n)=${req.body.identity} set n.${req.body.key}=${JSON.stringify(req.body.value)},n.update_dt=${Math.floor(Date.now() / 1000)}`).then(() => {
 						session.close();
 						res.send(JSON.stringify({
@@ -148,9 +154,9 @@
 						success: false,
 						message: `创建失败：${req.body.key} 为 ${req.body.value} 的记录已存在`
 					}));
-				} else callback();
+				} else mission();
 			});
-			else callback();
+			else mission();
 		}
 	}).listen(3530, () => {
 		console.log('BSCHA listening on port 3530...');

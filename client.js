@@ -168,19 +168,33 @@
 		let $generateInput = (field) => {
 			let input = wrap(field.input);
 			switch (input[0]) {
-				case 'select':
-					return;
+				case 'refer':
+					let optoins;
+					$.ajaxSetup({async: false});
+					$.post('query', {
+						route: JSON.stringify(input[1].route)
+					}, data => optoins = JSON.parse(data).table.records.map(record => ({
+						text: record.properties[input[1].key],
+						value: record.identity.low
+					})));
+					$.ajaxSetup({async: true});
+					return $('<select/>', {
+						name: field.key
+					}).append(optoins.map(option => $('<option/>', {
+						value: option.value
+					}).text(option.text)));
 				default:
 					return $(`<${input[0]}/>`).attr(Object.assign({name: field.key}, input[1]));
 			}
 		};
 		$.fn.$generateModifier = function ({field, value, valueDecorator = v => v, callback}) {
+			let text=this.text();
 			this.html('').append([
 				$generateInput(field).val(value),
 				'&nbsp;',
 				$('<a/>').css({
 					cursor: 'pointer'
-				}).text('☒').click(() => $(this).text(valueDecorator(value))),
+				}).text('☒').click(() => this.text(text)),
 				'&nbsp;',
 				$('<a/>').css({
 					cursor: 'pointer',
@@ -292,14 +306,32 @@
 							type: 'checkbox'
 						})),
 						...data.table.head.filter(field => !field.hide).map(field => $('<td/>').self(td => {
-							let output = wrap(field.output);
-							let value = output[0] === Date.name ?
-								new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
-								(output[0] === Number.name ?
-										record.properties[field.key].low :
-										record.properties[field.key]
-								);
-							$(td).text(value);
+							let output = wrap(field.output),
+								value = record.properties[field.key],
+								text;
+							switch (output[0]) {
+								case Date.name:
+									text = new Date(value.low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`);
+									break;
+								case Number.name:
+									text = value.low;
+									break;
+								case String.name:
+									text = value;
+									break;
+								default: {
+									let input = wrap(field.input);
+									if (input[0] === 'refer') {
+										$.ajaxSetup({async: false});
+										$.post('query', {
+											route: JSON.stringify(input[1].route),
+											identity: value
+										}, data => text = JSON.parse(data).table.records[0].properties[input[1].key]);
+										$.ajaxSetup({async: true});
+									}
+								}
+							}
+							$(td).text(text);
 							if (field.input) $(td).dblclick(e => {
 								$(td).$generateModifier({
 									field,
@@ -350,7 +382,7 @@
 						}).text('确认').click(e => {
 							$(e.target).parents('tr:first').self(tr => {
 								let properties = {}, errors = [];
-								Array.from($(tr).find('input[type=text]')).reduce((properties, input) => {
+								Array.from($(tr).find(':input,textarea,select')).reduce((properties, input) => {
 									let name = $(input).attr('name'), value = $(input).val(), pattern = patterns[name];
 									if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${name} 不符合 /^ ${pattern} $/`);
 									else properties[name] = value;
