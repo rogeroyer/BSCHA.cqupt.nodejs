@@ -234,29 +234,64 @@
 						$('<tr/>').append([
 							$('<th/>', {
 								scope: 'col'
+							}).self(th=>{
+								if (data.table.special) switch (data.table.special) {
+									case 'train':
+										$(th).append($('<button>', {
+											type: 'button',
+											class: 'btn btn-dark btn-sm'
+										}).text('训练').click(e => $.post('special/train', {}, (data) => {
+											$('#requesting_mask').hide();
+											data = JSON.parse(data);
+											if (!data.success) alert(data.message);
+											else location.href = location.href;
+										})));
+										break;
+									case 'classify':
+										$(th).append($('<button>', {
+											type: 'button',
+											class: 'btn btn-dark btn-sm'
+										}).text('分类').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
+											let $checked = $(tbody).find('input:checkbox:checked');
+											if ($checked.length && confirm('对选定的样本分类？')) {
+												$('#requesting_mask').show();
+												$.post('special/classify', {
+													identities: JSON.stringify(Array.from($checked).map(cb => $(cb).parents('tr:first').data('id')))
+												}, (data) => {
+													$('#requesting_mask').hide();
+													data = JSON.parse(data);
+													if (!data.success) alert(data.message);
+													else location.href = location.href;
+												});
+											}
+										})));
+										break;
+								}
 							}),
 							...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
 								scope: 'col'
-							}).self(th => (field.key in patterns) && $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
-								let w = $(th).width();
-								$(th).$generateModifier({
-									field: {key: '', input: 'textarea'},
-									value: patterns[field.key],
-									callback: e => {
-										if (confirm('确定修改规则？')) {
-											$('#requesting_mask').show();
-											$.post('modify/pattern', {
-												identity: data.table.service.identity.low,
-												key: field.key,
-												value: $(th).children('input:first').val()
-											}, () => {
-												$('#requesting_mask').hide();
-												location.href = location.href;
-											});
+							}).self(th => {
+								if (field.key in patterns) $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
+									let w = $(th).width();
+									$(th).$generateModifier({
+										field: {key: '', input: 'textarea'},
+										value: patterns[field.key],
+										callback: e => {
+											if (confirm('确定修改规则？')) {
+												$('#requesting_mask').show();
+												$.post('modify/pattern', {
+													identity: data.table.service.identity.low,
+													key: field.key,
+													value: $(th).children('input:first').val()
+												}, () => {
+													$('#requesting_mask').hide();
+													location.href = location.href;
+												});
+											}
 										}
-									}
-								}).children('textarea:first').width(w);
-							}))),
+									}).children('textarea:first').width(w);
+								});
+							})),
 							$('<th/>', {
 								scope: 'col'
 							})
@@ -286,7 +321,7 @@
 								scope: 'col'
 							}).append($('<button/>', {
 								class: 'btn btn-danger btn-sm'
-							}).text('批量删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
+							}).text('删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
 								let $checked = $(tbody).find('input:checkbox:checked');
 								if ($checked.length && confirm('确定删除选定的记录？')) {
 									$('#requesting_mask').show();
@@ -306,7 +341,7 @@
 						})),
 						...data.table.head.filter(field => !field.hide).map(field => $('<td/>').self(td => {
 							let output = wrap(field.output),
-								value = record.properties[field.key],
+								value = record.properties[field.key] || '',
 								text;
 							switch (output[0]) {
 								case Date.name:
@@ -415,7 +450,7 @@
 							});
 						}))
 					]).hide()).append($('<tr/>').append($('<td/>', {
-						colspan: 99
+						colspan: 999
 					}).append($('<button/>', {
 						type: 'button',
 						class: 'btn btn-primary btn-sm'
@@ -424,7 +459,9 @@
 							$(tr).prev().show();
 							$(tr).hide();
 						});
-					})))))
+					})).self(td => {
+						if (data.table.upload) ;
+					}))))
 				]);
 			}
 		});
