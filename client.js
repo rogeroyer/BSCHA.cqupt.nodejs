@@ -99,6 +99,8 @@
 			return $element;
 		};
 
+		let wrap = (x) => (typeof x) == 'string' ? [x, {}] : x;
+
 		$('body').$frame('root').self((root) => {
 			$(root).$frame('head').css({
 				display: 'flex',
@@ -163,11 +165,35 @@
 			])
 		});
 
+		let $generateInput = (field) => {
+			let input = wrap(field.input);
+			switch (input[0]) {
+				case 'select':
+					return;
+				default:
+					return $(`<${input[0]}/>`).attr(Object.assign({name: field.key}, input[1]));
+			}
+		};
+		$.fn.$generateModifier = function ({field, value, valueDecorator = v => v, callback}) {
+			this.html('').append([
+				$generateInput(field).val(value),
+				'&nbsp;',
+				$('<a/>').css({
+					cursor: 'pointer'
+				}).text('☒').click(() => $(this).text(valueDecorator(value))),
+				'&nbsp;',
+				$('<a/>').css({
+					cursor: 'pointer',
+					color: 'red'
+				}).text('☑').click(e => callback(e))
+			]);
+			return this;
+		};
+
 		$.post('query', {
 			route: JSON.stringify(state.route)
 		}, data => {
 			data = JSON.parse(data);
-			let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
 			$('body').$frame('root main main navigator').children('div.dropdown').self((div) => {
 				if (data.services.length) {
 					$(div).append($('<div/>', {
@@ -186,6 +212,7 @@
 				}).hide();
 			});
 			if (data.table) {
+				let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
 				$('body').$frame('root main main main').html('').append([
 					$('<table/>', {
 						class: 'table'
@@ -196,22 +223,13 @@
 							}),
 							...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
 								scope: 'col'
-							}).css({
-								whiteSpace: 'nowrap'
 							}).self(th => (field.key in patterns) && $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
-								$(th).html('').append([
-									$('<input/>', {
-										type: 'text'
-									}).val(patterns[field.key]),
-									'&nbsp;',
-									$('<a/>').css({
-										cursor: 'pointer'
-									}).text('☒').click(() => $(th).text(`/^ ${patterns[field.key]} $/`)),
-									'&nbsp;',
-									$('<a/>').css({
-										cursor: 'pointer',
-										color: 'red'
-									}).text('☑').click((e) => {
+								let w = $(th).width();
+								$(th).$generateModifier({
+									field: {key: '', input: 'textarea'},
+									value: patterns[field.key],
+									valueDecorator: v => `/^ ${v} $/`,
+									callback: e => {
 										if (confirm('确定修改规则？')) {
 											$('#requesting_mask').show();
 											$.post('modify/pattern', {
@@ -223,8 +241,8 @@
 												location.href = location.href;
 											});
 										}
-									})
-								]);
+									}
+								}).children('textarea:first').width(w);
 							}))),
 							$('<th/>', {
 								scope: 'col'
@@ -248,13 +266,13 @@
 							})),
 							...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
 								scope: 'col'
+							}).css({
+								whiteSpace: 'nowrap'
 							}).text(dictionary[field.key])),
 							$('<th/>', {
 								scope: 'col'
-							}).append($('<a/>').css({
-								cursor: 'pointer',
-								color: 'red',
-								whiteSpace: 'nowrap'
+							}).append($('<button/>', {
+								class: 'btn btn-danger btn-sm'
 							}).text('批量删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
 								let $checked = $(tbody).find('input:checkbox:checked');
 								if ($checked.length && confirm('确定删除选定的记录？')) {
@@ -274,53 +292,45 @@
 							type: 'checkbox'
 						})),
 						...data.table.head.filter(field => !field.hide).map(field => $('<td/>').self(td => {
-							let value = field.output === Date.name ?
+							let output = wrap(field.output);
+							let value = output[0] === Date.name ?
 								new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
-								(field.output === Number.name ?
+								(output[0] === Number.name ?
 										record.properties[field.key].low :
 										record.properties[field.key]
 								);
 							$(td).text(value);
-							if (field.input) $(td).dblclick(e => $(td).html('').append([
-								$('<input/>', {
-									type: 'text'
-								}).val(value),
-								'&nbsp;',
-								$('<a/>').css({
-									cursor: 'pointer'
-								}).text('☒').click(() => $(td).text(value)),
-								'&nbsp;',
-								$('<a/>').css({
-									cursor: 'pointer',
-									color: 'red'
-								}).text('☑').click((e) => {
-									let pattern = patterns[field.key],
-										value = $(td).children('input:first').val();
-									if (pattern && !RegExp(`^${pattern}$`).test(value)) alert(`${value} 不符合 /^ ${pattern} $/`);
-									else if (confirm('确定修改字段？')) {
-										$('#requesting_mask').show();
-										$.post('modify', {
-											route: JSON.stringify(state.route),
-											identity: record.identity.low,
-											key: field.key,
-											value: $(td).children('input:first').val()
-										}, (data) => {
-											$('#requesting_mask').hide();
-											data = JSON.parse(data);
-											if (data.success) location.href = location.href;
-											else alert(data.message);
-										});
+							if (field.input) $(td).dblclick(e => {
+								$(td).$generateModifier({
+									field,
+									value,
+									callback: e => {
+										let pattern = patterns[field.key],
+											value = $(td).children(':first').val();
+										if (pattern && !RegExp(`^${pattern}$`).test(value)) alert(`${value} 不符合 /^ ${pattern} $/`);
+										else if (confirm('确定修改字段？')) {
+											$('#requesting_mask').show();
+											$.post('modify', {
+												route: JSON.stringify(state.route),
+												identity: record.identity.low,
+												key: field.key,
+												value: value
+											}, (data) => {
+												$('#requesting_mask').hide();
+												data = JSON.parse(data);
+												if (data.success) location.href = location.href;
+												else alert(data.message);
+											});
+										}
 									}
-								})
-							]));
+								});
+							});
 							else $(td).css({
 								color: 'grey'
 							});
 						})),
-						$('<td/>').append($('<a/>').css({
-							cursor: 'pointer',
-							color: 'red',
-							whiteSpace: 'nowrap'
+						$('<td/>').append($('<button/>', {
+							class: 'btn btn-danger btn-sm'
 						}).text('删除').click(e => {
 							if (confirm('确定删除这条记录？')) {
 								$('#requesting_mask').show();
@@ -336,7 +346,7 @@
 					]))).append($('<tr/>').append([
 						$('<td/>').append($('<button/>', {
 							type: 'button',
-							class: 'btn btn-secondary'
+							class: 'btn btn-success btn-sm'
 						}).text('确认').click(e => {
 							$(e.target).parents('tr:first').self(tr => {
 								let properties = {}, errors = [];
@@ -362,11 +372,11 @@
 							});
 						})),
 						...data.table.head.filter(field => (!field.hide)).map(field => $('<td>').self(td => {
-							if (field.input) $(td).append($(`<${field.input[0]}/>`).attr(Object.assign({name: field.key}, field.input[1])))
+							if (field.input) $(td).append($generateInput(field));
 						})),
 						$('<td/>').append($('<button/>', {
 							type: 'button',
-							class: 'btn btn-secondary'
+							class: 'btn btn-secondary btn-sm'
 						}).text('取消').click(e => {
 							$(e.target).parents('tr:first').self(tr => {
 								$(tr).next().show();
@@ -377,7 +387,7 @@
 						colspan: 99
 					}).append($('<button/>', {
 						type: 'button',
-						class: 'btn btn-secondary'
+						class: 'btn btn-primary btn-sm'
 					}).text('创建').click(e => {
 						$(e.target).parents('tr:first').self(tr => {
 							$(tr).prev().show();
