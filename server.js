@@ -11,7 +11,6 @@
 		species: {
 			services: [],
 			table: {
-				referred: true,
 				head: [
 					{key: 'name', primary: true, output: String.name, input: ['input', {type: 'text'}]},
 					{key: 'description', output: String.name, input: ['input', {type: 'text'}]},

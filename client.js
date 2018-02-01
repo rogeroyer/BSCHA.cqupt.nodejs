@@ -188,7 +188,7 @@
 			}
 		};
 		$.fn.$generateModifier = function ({field, value, valueDecorator = v => v, callback}) {
-			let text=this.text();
+			let text = this.text();
 			this.html('').append([
 				$generateInput(field).val(value),
 				'&nbsp;',
@@ -384,7 +384,7 @@
 								let properties = {}, errors = [];
 								Array.from($(tr).find(':input,textarea,select')).reduce((properties, input) => {
 									let name = $(input).attr('name'), value = $(input).val(), pattern = patterns[name];
-									if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${name} 不符合 /^ ${pattern} $/`);
+									if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${dictionary[name]} 不符合 /^ ${pattern} $/`);
 									else properties[name] = value;
 									return properties;
 								}, properties);
