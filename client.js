@@ -167,6 +167,7 @@
 			route: JSON.stringify(state.route)
 		}, data => {
 			data = JSON.parse(data);
+			let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
 			$('body').$frame('root main main navigator').children('div.dropdown').self((div) => {
 				if (data.services.length) {
 					$(div).append($('<div/>', {
@@ -184,59 +185,138 @@
 					disabled: true
 				}).hide();
 			});
-			if (data.rule) {
+			if (data.table) {
 				$('body').$frame('root main main main').html('').append([
 					$('<table/>', {
 						class: 'table'
-					}).append($('<thead/>').append($('<tr/>').append([
-						$('<th/>', {
-							scope: 'col'
-						}).append($('<a/>').css({
-							cursor: 'pointer'
-						}).text('A').click(e => $(e.target).parents('table:first').children('tbody').find('input:checkbox').prop({
-							checked: true
-						}))).append('/').append($('<a/>').css({
-							cursor: 'pointer'
-						}).text('O').click(e => {
-							for (let cb of Array.from($(e.target).parents('table:first').children('tbody').find('input:checkbox'))) {
-								$(cb).prop({
-									checked: !$(cb).prop('checked')
-								});
-							}
-						})),
-						...data.rule.head.filter(field => !field.hide).map(field => $('<th/>', {
-							scope: 'col'
-						}).text(dictionary[field.key])),
-						$('<th/>', {
-							scope: 'col'
-						}).append($('<a/>').css({
-							cursor: 'pointer',
-							color: 'red',
-							whiteSpace: 'nowrap'
-						}).text('删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
-							let $checked=$(tbody).find('input:checkbox:checked');
-							if ($checked.length && confirm('确定删除选定的记录？')) {
-								$('#requesting_mask').show();
-								$.post('delete', {
-									route: JSON.stringify(state.route),
-									identities: JSON.stringify(Array.from($checked).map(cb=>$(cb).parents('tr:first').data('id')))
-								}, () => {
-									$('#requesting_mask').hide();
-									location.href = location.href;
-								});
-							}
-						})))
-					]))).append($('<tbody/>').append(data.rule.records.map(record => $('<tr/>').data('id', record.identity.low).append([
+					}).append($('<thead/>').append([
+						$('<tr/>').append([
+							$('<th/>', {
+								scope: 'col'
+							}),
+							...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
+								scope: 'col'
+							}).css({
+								whiteSpace: 'nowrap'
+							}).self(th => (field.key in patterns) && $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
+								$(th).html('').append([
+									$('<input/>', {
+										type: 'text'
+									}).val(patterns[field.key]),
+									'&nbsp;',
+									$('<a/>').css({
+										cursor: 'pointer'
+									}).text('☒').click(() => $(th).text(`/^ ${patterns[field.key]} $/`)),
+									'&nbsp;',
+									$('<a/>').css({
+										cursor: 'pointer',
+										color: 'red'
+									}).text('☑').click((e) => {
+										if (confirm('确定修改规则？')) {
+											$('#requesting_mask').show();
+											$.post('modify/pattern', {
+												identity: data.table.service.identity.low,
+												key: field.key,
+												value: $(th).children('input:first').val()
+											}, () => {
+												$('#requesting_mask').hide();
+												location.href = location.href;
+											});
+										}
+									})
+								]);
+							}))),
+							$('<th/>', {
+								scope: 'col'
+							})
+						]),
+						$('<tr/>').append([
+							$('<th/>', {
+								scope: 'col'
+							}).append($('<a/>').css({
+								cursor: 'pointer'
+							}).text('A').click(e => $(e.target).parents('table:first').children('tbody').find('input:checkbox').prop({
+								checked: true
+							}))).append('/').append($('<a/>').css({
+								cursor: 'pointer'
+							}).text('O').click(e => {
+								for (let cb of Array.from($(e.target).parents('table:first').children('tbody').find('input:checkbox'))) {
+									$(cb).prop({
+										checked: !$(cb).prop('checked')
+									});
+								}
+							})),
+							...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
+								scope: 'col'
+							}).text(dictionary[field.key])),
+							$('<th/>', {
+								scope: 'col'
+							}).append($('<a/>').css({
+								cursor: 'pointer',
+								color: 'red',
+								whiteSpace: 'nowrap'
+							}).text('批量删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
+								let $checked = $(tbody).find('input:checkbox:checked');
+								if ($checked.length && confirm('确定删除选定的记录？')) {
+									$('#requesting_mask').show();
+									$.post('delete', {
+										route: JSON.stringify(state.route),
+										identities: JSON.stringify(Array.from($checked).map(cb => $(cb).parents('tr:first').data('id')))
+									}, () => {
+										$('#requesting_mask').hide();
+										location.href = location.href;
+									});
+								}
+							})))
+						])
+					])).append($('<tbody/>').append(data.table.records.map(record => $('<tr/>').data('id', record.identity.low).append([
 						$('<td/>').append($('<input/>', {
 							type: 'checkbox'
 						})),
-						...data.rule.head.filter(field => !field.hide).map(field => $('<td/>').text(field.type === Date.name ?
-							new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
-							(field.type === Number.name ?
-									record.properties[field.key].low :
-									record.properties[field.key]
-							)
-						)),
+						...data.table.head.filter(field => !field.hide).map(field => $('<td/>').self(td => {
+							let value = field.output === Date.name ?
+								new Date(record.properties[field.key].low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`) :
+								(field.output === Number.name ?
+										record.properties[field.key].low :
+										record.properties[field.key]
+								);
+							$(td).text(value);
+							if (field.input) $(td).dblclick(e => $(td).html('').append([
+								$('<input/>', {
+									type: 'text'
+								}).val(value),
+								'&nbsp;',
+								$('<a/>').css({
+									cursor: 'pointer'
+								}).text('☒').click(() => $(td).text(value)),
+								'&nbsp;',
+								$('<a/>').css({
+									cursor: 'pointer',
+									color: 'red'
+								}).text('☑').click((e) => {
+									let pattern = patterns[field.key],
+										value = $(td).children('input:first').val();
+									if (pattern && !RegExp(`^${pattern}$`).test(value)) alert(`${value} 不符合 /^ ${pattern} $/`);
+									else if (confirm('确定修改字段？')) {
+										$('#requesting_mask').show();
+										$.post('modify', {
+											route: JSON.stringify(state.route),
+											identity: record.identity.low,
+											key: field.key,
+											value: $(td).children('input:first').val()
+										}, (data) => {
+											$('#requesting_mask').hide();
+											data = JSON.parse(data);
+											if (data.success) location.href = location.href;
+											else alert(data.message);
+										});
+									}
+								})
+							]));
+							else $(td).css({
+								color: 'grey'
+							});
+						})),
 						$('<td/>').append($('<a/>').css({
 							cursor: 'pointer',
 							color: 'red',
@@ -253,63 +333,57 @@
 								});
 							}
 						})),
-					]))).self(tbody => {
-						if (data.rule.create) {
-							$(tbody).append($('<tr/>').append([
-								$('<td/>').append($('<button/>', {
-									type: 'button',
-									class: 'btn btn-secondary'
-								}).text('确认').click(e => {
-									$(e.target).parents('tr:first').self(tr => {
-										let props = {}, errors = [];
-										Array.from($(tr).find('input[type=text]')).reduce((props, input) => {
-											let name = $(input).attr('name'), value = $(input).val(), pattern = $(input).attr('pattern');
-											if (pattern && !RegExp(pattern).test(value)) errors.push(`${name} 不满足 /${pattern}/!`);
-											else props[name] = value;
-											return props;
-										}, props);
-										if (errors.length) alert(errors.join('\n'));
-										else {
-											$('#requesting_mask').show();
-											$.post('create', {
-												route: JSON.stringify(state.route),
-												props: JSON.stringify(props)
-											}, (data) => {
-												$('#requesting_mask').hide();
-												data = JSON.parse(data);
-												if (data.success) location.href = location.href;
-												else alert(data.message);
-											});
-										}
+					]))).append($('<tr/>').append([
+						$('<td/>').append($('<button/>', {
+							type: 'button',
+							class: 'btn btn-secondary'
+						}).text('确认').click(e => {
+							$(e.target).parents('tr:first').self(tr => {
+								let properties = {}, errors = [];
+								Array.from($(tr).find('input[type=text]')).reduce((properties, input) => {
+									let name = $(input).attr('name'), value = $(input).val(), pattern = patterns[name];
+									if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${name} 不符合 /^ ${pattern} $/`);
+									else properties[name] = value;
+									return properties;
+								}, properties);
+								if (errors.length) alert(errors.join('\n'));
+								else {
+									$('#requesting_mask').show();
+									$.post('create', {
+										route: JSON.stringify(state.route),
+										properties: JSON.stringify(properties)
+									}, (data) => {
+										$('#requesting_mask').hide();
+										data = JSON.parse(data);
+										if (data.success) location.href = location.href;
+										else alert(data.message);
 									});
-								})),
-								...data.rule.head.filter(field => (!field.hide)).map(field => $('<td>').self(td => {
-									if (field.edit) {
-										$(td).append($(`<${field.edit[0]}/>`).attr(Object.assign({name: field.key}, field.edit[1])))
-									}
-								})),
-								$('<td/>').append($('<button/>', {
-									type: 'button',
-									class: 'btn btn-secondary'
-								}).text('取消').click(e => {
-									$(e.target).parents('tr:first').self(tr => {
-										$(tr).next().show();
-										$(tr).hide();
-									});
-								}))
-							]).hide()).append($('<tr/>').append($('<td/>', {
-								colspan: 99
-							}).append($('<button/>', {
-								type: 'button',
-								class: 'btn btn-secondary'
-							}).text('创建').click(e => {
-								$(e.target).parents('tr:first').self(tr => {
-									$(tr).prev().show();
-									$(tr).hide();
-								});
-							}))))
-						}
-					}))
+								}
+							});
+						})),
+						...data.table.head.filter(field => (!field.hide)).map(field => $('<td>').self(td => {
+							if (field.input) $(td).append($(`<${field.input[0]}/>`).attr(Object.assign({name: field.key}, field.input[1])))
+						})),
+						$('<td/>').append($('<button/>', {
+							type: 'button',
+							class: 'btn btn-secondary'
+						}).text('取消').click(e => {
+							$(e.target).parents('tr:first').self(tr => {
+								$(tr).next().show();
+								$(tr).hide();
+							});
+						}))
+					]).hide()).append($('<tr/>').append($('<td/>', {
+						colspan: 99
+					}).append($('<button/>', {
+						type: 'button',
+						class: 'btn btn-secondary'
+					}).text('创建').click(e => {
+						$(e.target).parents('tr:first').self(tr => {
+							$(tr).prev().show();
+							$(tr).hide();
+						});
+					})))))
 				]);
 			}
 		});
