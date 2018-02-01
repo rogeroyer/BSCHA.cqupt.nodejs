@@ -187,14 +187,14 @@
 					return $(`<${input[0]}/>`).attr(Object.assign({name: field.key}, input[1]));
 			}
 		};
-		$.fn.$generateModifier = function ({field, value, valueDecorator = v => v, callback}) {
-			let text = this.text();
+		$.fn.$generateModifier = function ({field, value, callback}) {
+			let html = this.html();
 			this.html('').append([
 				$generateInput(field).val(value),
 				'&nbsp;',
 				$('<a/>').css({
 					cursor: 'pointer'
-				}).text('☒').click(() => this.text(text)),
+				}).text('☒').click(() => this.html(html)),
 				'&nbsp;',
 				$('<a/>').css({
 					cursor: 'pointer',
@@ -242,7 +242,6 @@
 								$(th).$generateModifier({
 									field: {key: '', input: 'textarea'},
 									value: patterns[field.key],
-									valueDecorator: v => `/^ ${v} $/`,
 									callback: e => {
 										if (confirm('确定修改规则？')) {
 											$('#requesting_mask').show();
@@ -317,7 +316,7 @@
 									text = value.low;
 									break;
 								case String.name:
-									text = value;
+									text = value.replace(/\n/g, '<br/>');
 									break;
 								default: {
 									let input = wrap(field.input);
@@ -331,7 +330,7 @@
 									}
 								}
 							}
-							$(td).text(text);
+							$(td).html(text);
 							if (field.input) $(td).dblclick(e => {
 								$(td).$generateModifier({
 									field,
