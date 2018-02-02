@@ -6,6 +6,8 @@
 		neo4j = require('neo4j-driver').v1,
 		neo4j_driver = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha'));
 
+	let path = (l => l.slice(0, l.length - 1).join('\\'))(require('path').dirname(require.main.filename).split(/[\\\/]/));
+
 	const router = {
 		services: ['species', 'training', 'applying'],
 		species: {
@@ -193,6 +195,7 @@
 			}
 		})
 		.post(/special\/train/i, (req, res) => {
+			console.log(path);
 			res.send(JSON.stringify({
 				success: false,
 				message: '算法尚未对接'

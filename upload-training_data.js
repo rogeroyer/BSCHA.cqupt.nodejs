@@ -2,8 +2,7 @@
 	'use strict';
 	console.log('-----------------\n');
 
-	let I = '//',
-		package_path = process.argv[2],
+	let package_path = process.argv[2],
 		fs = require('fs'),
 		neo4j = require('neo4j-driver').v1,
 		nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
@@ -14,7 +13,7 @@
 		let package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
 		console.log(package_path);
 		fs.readdirSync(package_path).forEach(species_dir => {
-			let species_path = package_path + I + species_dir;
+			let species_path = package_path + '\\' + species_dir;
 			if (fs.statSync(species_path).isDirectory) {
 				console.log(`进入物种路径 ${species_dir}：`);
 
@@ -22,7 +21,7 @@
 				ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance{name:'${species_dir}'}) return id(n)`).then(({records}) => {
 					let species_id, mission = () => {
 						fs.readdirSync(species_path).forEach(sample_file => {
-							let sample_path = species_path + I + sample_file;
+							let sample_path = species_path + '\\' + sample_file;
 							if (fs.statSync(sample_path).isFile) {
 								t++;
 								console.log(`提取样本 ${sample_file}：`);
