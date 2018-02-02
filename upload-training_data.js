@@ -37,7 +37,7 @@
 					if (records[0]) {
 						species_id = records[0]._fields[0].low;
 						mission();
-					} else ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) create (n)-[:implement]->(n1:instance{name:'${species_dir}',create_dt:${current_dt},update_dt:${current_dt}}) return id(n1)`).then(({records}) => {
+					} else ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) create (n)-[:implement]->(n1:instance{name:'${species_dir}',description:'',create_dt:${current_dt},update_dt:${current_dt}}) return id(n1)`).then(({records}) => {
 						species_id = records[0]._fields[0].low;
 						mission();
 					});
