@@ -140,7 +140,7 @@
 							res.send(null);
 						}
 					});
-					if (data.table.referred.length) {
+					if (data.table.referred && data.table.referred.length) {
 						let u = 0;
 						for (let service of data.table.referred) {
 							session.run(`match (:root{name:'BSCHA'})${service.route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where n.${service.key}='${id}' delete r,n`).then(() => {

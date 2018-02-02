@@ -282,7 +282,7 @@
 												$.post('modify/pattern', {
 													identity: data.table.service.identity.low,
 													key: field.key,
-													value: $(th).children('input:first').val()
+													value: $(th).children(':first').val()
 												}, () => {
 													$('#requesting_mask').hide();
 													location.href = location.href;
