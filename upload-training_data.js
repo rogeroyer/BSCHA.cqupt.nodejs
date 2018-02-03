@@ -1,100 +1,134 @@
 (() => {
     'use strict';
-    console.log('-----------------\n');
-
-    let package_path = process.argv[2],
-        fs = require('fs'),
+    const fs = require('fs'),
         neo4j = require('neo4j-driver').v1,
-        nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
-        ns = nd.session(),
-        current_dt = Math.floor(Date.now() / 1000),
-        species_queue = [],
-        sample_queue = [],
-        t = 0;
+        readline = require('readline');
 
-
-
-    // let mission = () => {
-    //     let mission = () => {
-    //         ns.close();
-    //         nd.close();
-    //         console.log('\n-----------------');
-    //         console.log('执行完毕，请按任意键退出。');
-    //     };
-    //     if (sample_queue.length) {
-    //         let t = 0;
-    //         sample_queue.forEach(item => item(() => {
-    //             if (++t === sample_queue.length) mission();
-    //         }));
-    //     } else mission();
-    // };
-    // if (species_queue.length) {
-    //     let t = 0;
-    //     species_queue.forEach(item => item(() => {
-    //         if (++t === species_queue.length) mission();
-    //     }));
-    // } else mission();
-
-    if (fs.statSync(package_path).isDirectory()) {
-        let package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
-        console.log(`进入包路径 ${package_dir}：`);
-
-        let data_pattern, ns = nd.session();
-        ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) return n.patterns`).then(({records}) => {
-            ns.close();
-            data_pattern = RegExp(JSON.parse(records[0]._fields[0].replace(/\\/g, '\\\\')).data);
-
-            fs.readdirSync(package_path).forEach(species_dir => {
-                let species_path = package_path + '\\' + species_dir;
-                if (fs.statSync(species_path).isDirectory) {
-                    console.log(`进入物种路径 ${species_dir}：`);
-
-                    let ns = nd.session();
-                    ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance{name:'${species_dir}'}) return id(n)`).then(({records}) => {
-                        ns.close();
-                        let species_id, mission = () => {
-                            fs.readdirSync(species_path).forEach(sample_file => {
-                                let sample_path = species_path + '\\' + sample_file;
-                                if (fs.statSync(sample_path).isFile && /^.*\.txt$/.test(sample_file)) {
-                                    t++;
-                                    console.log(`提取样本 ${sample_file}：`);
-                                    let data = fs.readFileSync(sample_path, 'utf-8').replace(/\r?\n/g, '\\n');
-
-                                    if (data_pattern.test(data)) {
-                                        let ns = nd.session();
-                                        let cql = `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:'${species_id}',name:'${sample_file}',data:'${data}',create_dt:${current_dt},update_dt:${current_dt}})`,
-                                            then = () => {
-                                                ns.close();
-                                                console.log('提取完毕');
-                                                if (!--t) {
-                                                    console.log('\n-----------------');
-                                                    console.log('执行完毕，请按任意键退出。');
-                                                }
-                                            };
-                                        ns.run(cql).then(then).catch(() => ns.run(cql).then(then));
-                                    } else console.log(`样本文件 ${sample_file} 格式不符合规范，请修改文件或规范`);
-                                } else console.log(`样本路径 ${sample_file} 不是文本文件，已忽略！`);
-                            });
-                        };
-                        if (records[0]) {
-                            species_id = records[0]._fields[0].low;
-                            mission();
-                        } else {
-                            let ns = nd.session();
-                            ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) create (n)-[:implement]->(n1:instance{name:'${species_dir}',description:'',create_dt:${current_dt},update_dt:${current_dt}}) return id(n1)`).then(({records}) => {
-                                ns.close();
-                                species_id = records[0]._fields[0].low;
-                                mission();
-                            });
-                        }
+    let promise = (...args) => new Promise(...args);
+    console.log('-----------------\n');
+    promise(resolve => {
+        let package_path = process.argv[2],
+            package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
+        if (fs.statSync(package_path).isDirectory()) {
+            let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
+                ns = nd.session();
+            promise(resolve => {
+                Promise.all([
+                    promise(resolve => ns.run(
+                        `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) return n.patterns`
+                    ).then(({records}) => resolve(records[0]._fields[0]))),
+                    promise(resolve => ns.run(
+                        `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) return n.patterns`
+                    ).then(({records}) => resolve(records[0]._fields[0])))
+                ]).then((patterns_list) => {
+                    let [species_patterns, training_patterns] = patterns_list.map(patterns => {
+                        patterns = JSON.parse(patterns.replace(/\\/g, '\\\\'));
+                        Object.keys(patterns).forEach(k => patterns[k] = RegExp(`^${patterns[k]}$`));
+                        return patterns;
                     });
-                } else console.log(`物种路径 ${package_dir} 路径不是目录，已忽略！`);
+
+                    let tree = [];
+                    console.log("开始校验：");
+                    let pack = fs.readdirSync(package_path).map(species_dir => [species_dir, package_path + '\\' + species_dir]).filter(([species_dir, species_path]) => fs.statSync(species_path).isDirectory),
+                        invalid = pack.find(([species_dir,]) => !species_patterns.name.test(species_dir));
+                    if (invalid === undefined) {
+                        for (let [species_dir, species_path] of pack) {
+                            tree.push({name: species_dir});
+                            let species = fs.readdirSync(species_path).map(sample_file => [sample_file, species_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isDirectory && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
+                                invalid = species.find(([sample_file,]) => !training_patterns.name.test(sample_file));
+                            if (invalid === undefined) {
+                                species = species.map(([sample_file, sample_path]) => [sample_file, sample_path, fs.readFileSync(sample_path, 'utf-8')]);
+                                let invalid = species.find(([, , sample_data]) => !training_patterns.data.test(sample_data));
+                                if (invalid === undefined) {
+                                    tree[tree.length - 1].samples = species.map(([name, , data]) => ({name, data}));
+                                } else {
+                                    console.error(`样本 ${species_dir}\\${invalid[0]} 的数据不符合规范！`);
+                                    return resolve();
+                                }
+                            } else {
+                                console.error(`样本 ${species_dir}\\${invalid[0]} 的名称不符合规范！`);
+                                return resolve();
+                            }
+                        }
+                    } else {
+                        console.error(`物种 ${invalid[0]} 的名称不符合规范！`);
+                        return resolve();
+                    }
+
+                    Promise.all(tree.map(species => promise(resolve => {
+                        let check = name => {
+                            ns.run(
+                                `match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance{name:'${name}'}) return id(n)`
+                            ).then(({records}) => {
+                                if (records[0]) resolve(Object.assign(species, {id: records[0]._fields[0].low}));
+                                else {
+                                    let rl = readline.createInterface({
+                                        input: process.stdin,
+                                        output: process.stdout
+                                    });
+                                    let choose = () => rl.question(`物种 ${name} 不存在！请输入[1:修改物种名称，2:创建该物种]：`, answer => {
+                                        switch (answer) {
+                                            case '1':
+                                                let readName = () => rl.question('请输入物种名: ', answer => {
+                                                    if (species_patterns.name.test(answer)) {
+                                                        rl.close();
+                                                        check(answer);
+                                                    } else {
+                                                        console.warn(`物种名 ${answer} 不符合规范！`);
+                                                        readName();
+                                                    }
+                                                });
+                                                readName();
+                                                break;
+                                            case '2':
+                                                rl.close();
+                                                let dt = Math.floor(Date.now() / 1000);
+                                                ns.run(
+                                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) create (n)-[:implement]->(n1:instance{name:'${name}',description:'',create_dt:${dt},update_dt:${dt}}) return id(n1)`
+                                                ).then(({records}) => resolve(Object.assign(species, {id: records[0]._fields[0].low})));
+                                                break;
+                                            default:
+                                                console.warn('错误的输入！')
+                                                choose();
+                                        }
+                                    });
+                                    choose();
+                                }
+                            })
+                        };
+                        check(species.name);
+                    }))).then(tree => {
+                        console.log('校验完毕，开始录入：');
+                        Promise.all(tree.map(species => promise(resolve => {
+                            let dt = Math.floor(Date.now() / 1000),
+                                count = 0;
+                            Promise.all(species.samples.map(sample => promise(resolve => {
+                                count++;
+                                ns.run(
+                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:'${species.id}',name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
+                                ).then(() => resolve());
+                            }))).then(() => {
+                                console.log(`录入完毕，共录入${count}个样本。`);
+                                resolve();
+                            });
+                        }))).then(() => resolve());
+                    });
+                })
+            }).then(() => {
+                ns.close();
+                nd.close();
+                return resolve();
             });
-        });
-    } else console.log(`包路径 ${package_dir} 不是目录，已忽略！`);
+        } else {
+            console.error(`包对象 ${package_dir} 不是目录，已忽略！`);
+            return resolve();
+        }
+    }).then(() => {
+        console.log('\n-----------------');
+        console.log('执行完毕，请按任意键退出。');
 
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.on('data', process.exit.bind(process, 0));
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', process.exit.bind(process, 0));
+    });
 })();
-

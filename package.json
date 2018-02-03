@@ -22,7 +22,7 @@
     "express": "^4.16.2",
     "jquery": "^3.3.1",
     "neo4j-driver": "^1.5.3",
-    "popper.js": "^1.12.9",
+    "popper.js": "^1.13.0",
     "reset-css": "^2.2.1"
   }
 }
