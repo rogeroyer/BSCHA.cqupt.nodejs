@@ -37,7 +37,7 @@
 
     if (fs.statSync(package_path).isDirectory()) {
         let package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
-        console.log(`进入包路径 ${package_path}：`);
+        console.log(`进入包路径 ${package_dir}：`);
 
         let data_pattern, ns = nd.session();
         ns.run(`match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) return n.patterns`).then(({records}) => {
