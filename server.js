@@ -52,7 +52,6 @@
     };
 
     express()
-    /*.use(require('express-fileupload')())*/
         .use(express.static('.'))
         .use(bodyParser.json())
         .use(bodyParser.urlencoded({

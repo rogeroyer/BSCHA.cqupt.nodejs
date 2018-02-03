@@ -20,7 +20,7 @@
                     promise(resolve => ns.run(
                         `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) return n.patterns`
                     ).then(({records}) => resolve(records[0]._fields[0])))
-                ]).then((patterns_list) => {
+                ]).then(patterns_list => {
                     let [species_patterns, training_patterns] = patterns_list.map(patterns => {
                         patterns = JSON.parse(patterns.replace(/\\/g, '\\\\'));
                         Object.keys(patterns).forEach(k => patterns[k] = RegExp(`^${patterns[k]}$`));
