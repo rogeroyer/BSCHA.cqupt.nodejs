@@ -11,7 +11,8 @@
             package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
         if (fs.statSync(package_path).isDirectory()) {
             let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
-                ns = nd.session();
+                ns = nd.session(),
+                count = 0;
             promise(resolve => {
                 promise(resolve => ns.run(
                     `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) return n.patterns`
@@ -22,7 +23,7 @@
                     let tree = [];
 
                     console.log("开始校验：");
-                    let pack = fs.readdirSync(package_path).map(sample_file => [sample_file, package_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isDirectory && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
+                    let pack = fs.readdirSync(package_path).map(sample_file => [sample_file, package_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isFile() && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
                         invalid = pack.find(([sample_file,]) => !patterns.name.test(sample_file));
                     if (invalid === undefined) {
                         pack = pack.map(([sample_file, sample_path]) => [sample_file, sample_path, fs.readFileSync(sample_path, 'utf-8')]);
@@ -39,19 +40,16 @@
                     }
 
                     console.log('校验完毕，开始录入：');
-                    let dt = Math.floor(Date.now() / 1000),
-                        count = 0;
+                    let dt = Math.floor(Date.now() / 1000);
                     Promise.all(tree.map(sample => promise(resolve => {
                         count++;
                         ns.run(
                             `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'applying'}) create (n)-[:implement]->(:instance{name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
                         ).then(() => resolve());
-                    }))).then(() => {
-                        console.log(`录入完毕，共录入${count}个样本。`);
-                        resolve();
-                    });
+                    }))).then(() => resolve());
                 });
             }).then(() => {
+                console.log(`录入完毕，共录入${count}个样本。`);
                 ns.close();
                 nd.close();
                 return resolve();
