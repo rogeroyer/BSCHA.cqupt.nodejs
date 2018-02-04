@@ -5,7 +5,6 @@
         readline = require('readline');
     require('./extend');
 
-    let promise = (...args) => new Promise(...args);
     console.log('-----------------\n');
     promise(resolve => {
         let package_path = process.argv[2],
@@ -29,7 +28,7 @@
                 });
 
                 let tree = [];
-                console.log("开始校验：");
+                console.log("开始校验……");
                 let pack = fs.readdirSync(package_path).map(species_dir => [species_dir, package_path + '\\' + species_dir]).filter(([species_dir, species_path]) => fs.statSync(species_path).isDirectory()),
                     invalid = pack.find(([species_dir,]) => !species_patterns.name.test(species_dir));
                 if (invalid === undefined) {
@@ -99,7 +98,7 @@
                     };
                     check(species.name);
                 })).then(tree => {
-                    console.log('校验完毕，开始录入：');
+                    console.log('校验完毕，开始录入……');
                     Promise.all(tree.map(species => promise(resolve => {
                         let dt = Math.floor(Date.now() / 1000);
                         Promise.all(species.samples.map(sample => promise(resolve => {
@@ -122,7 +121,7 @@
         }
     }).then(() => {
         console.log('\n-----------------');
-        console.log('执行完毕，请按任意键退出。');
+        console.log('请按任意键退出。');
 
         process.stdin.setRawMode(true);
         process.stdin.resume();

@@ -3,8 +3,8 @@
     const fs = require('fs'),
         neo4j = require('neo4j-driver').v1,
         readline = require('readline');
+    require('./extend');
 
-    let promise = (...args) => new Promise(...args);
     console.log('-----------------\n');
     promise(resolve => {
         let package_path = process.argv[2],
@@ -22,7 +22,7 @@
 
                     let tree = [];
 
-                    console.log("开始校验：");
+                    console.log("开始校验……");
                     let pack = fs.readdirSync(package_path).map(sample_file => [sample_file, package_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isFile() && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
                         invalid = pack.find(([sample_file,]) => !patterns.name.test(sample_file));
                     if (invalid === undefined) {
@@ -39,12 +39,12 @@
                         return resolve();
                     }
 
-                    console.log('校验完毕，开始录入：');
+                    console.log('校验完毕，开始录入……');
                     let dt = Math.floor(Date.now() / 1000);
                     Promise.all(tree.map(sample => promise(resolve => {
                         count++;
                         ns.run(
-                            `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'applying'}) create (n)-[:implement]->(:instance{name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
+                            `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'applying'}) create (n)-[:implement]->(:instance{name:'${sample.name}',data:'${sample.data}',classification:'未知',create_dt:${dt},update_dt:${dt}})`
                         ).then(() => resolve());
                     }))).then(() => resolve());
                 });
@@ -60,7 +60,7 @@
         }
     }).then(() => {
         console.log('\n-----------------');
-        console.log('执行完毕，请按任意键退出。');
+        console.log('请按任意键退出。');
 
         process.stdin.setRawMode(true);
         process.stdin.resume();

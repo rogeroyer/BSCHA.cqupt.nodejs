@@ -16,8 +16,8 @@
                     {route: ['training'], key: 'species'}
                 ],
                 head: [
-                    {key: 'name', primary: true, output: String.name, input: ['input', {type: 'text'}]},
-                    {key: 'description', output: String.name, input: ['input', {type: 'text'}]},
+                    {key: 'name', primary: true, output: String.name, input: 'textarea'},
+                    {key: 'description', output: String.name, input: 'textarea'},
                     {key: 'update_dt', output: Date.name},
                     {key: 'create_dt', output: Date.name}
                 ]
@@ -27,8 +27,8 @@
             services: [],
             table: {
                 head: [
-                    {key: 'species', output: 'refer', input: ['refer', {route: ['species'], key: 'name'}]},
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}]},
+                    {key: 'species', output: 'refer', input: 'refer', refer: {route: ['species'], key: 'name'}},
+                    {key: 'name', output: String.name, input: 'textarea'},
                     {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
                     {key: 'update_dt', output: Date.name},
                     {key: 'create_dt', output: Date.name}
@@ -41,9 +41,9 @@
             table: {
                 special: 'classify',
                 head: [
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}]},
+                    {key: 'name', output: String.name, input: 'textarea'},
                     {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
-                    {key: 'classify_result', output: String.name},
+                    {key: 'classification', output: String.name, special: 'classify'},
                     {key: 'update_dt', output: Date.name},
                     {key: 'create_dt', output: Date.name}
                 ]
@@ -55,7 +55,7 @@
         .use(express.static('.'))
         .use(bodyParser.json())
         .use(bodyParser.urlencoded({
-            extended: false
+            extended: true
         }))
         .get(/^.*$/, (req, res) => {
             res.send(require('fs').readFileSync('client.html', 'utf8'));
@@ -68,14 +68,14 @@
                 name: '名称',
                 description: '描述',
                 data: '数据',
-                classify_result:'分类结果',
+                classification: '分类',
                 create_dt: '创建时间',
                 update_dt: '修改时间'
             }));
         })
         .post(/query$/i, (req, res) => {
-            let {route, identity = null} = req.body;
-            route = JSON.parse(route);
+            console.log(typeof req.body.route, req.body.route);
+            let {route = [], identity = null} = req.body;
             let data = route.reduce((a, b) => a[b], router);
             if (data.table) {
                 let session = neo4j_driver.session();
@@ -90,9 +90,8 @@
             } else res.send(JSON.stringify(data));
         })
         .post(/create$/i, (req, res) => {
-            let route = JSON.parse(req.body.route),
-                data = route.reduce((a, b) => a[b], router),
-                properties = JSON.parse(req.body.properties);
+            let {route, properties} = req.body,
+                data = route.reduce((a, b) => a[b], router);
             if (data.table) {
                 let session = neo4j_driver.session(),
                     checks = [], errors = [], t = 0,
@@ -129,15 +128,14 @@
             }
         })
         .post(/delete$/i, (req, res) => {
-            let route = JSON.parse(req.body.route),
-                data = route.reduce((a, b) => a[b], router),
-                ids = JSON.parse(req.body.identities);
-            if (ids.length) {
+            let {route, identities} = req.body,
+                data = route.reduce((a, b) => a[b], router);
+            if (identities.length) {
                 let session = neo4j_driver.session(),
                     t = 0;
-                for (let id of ids) {
+                for (let id of identities) {
                     let mission = () => session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n)=${id} delete r,n`).then(() => {
-                        if (++t == ids.length) {
+                        if (++t == identities.length) {
                             session.close();
                             res.send(null);
                         }
@@ -154,19 +152,20 @@
             }
         })
         .post(/modify\/pattern$/i, (req, res) => {
-            let session = neo4j_driver.session();
-            session.run(`match (n) where id(n)=${req.body.identity} return n`).then(({records: [service]}) => {
+            let {identity, key, value} = req.body,
+                session = neo4j_driver.session();
+            session.run(`match (n) where id(n)=${identity} return n`).then(({records: [service]}) => {
                 let patterns = Object.assign(JSON.parse(service._fields[0].properties.patterns.replace(/\\/g, '\\\\')), {
-                    [req.body.key]: req.body.value
+                    [key]: value
                 });
-                session.run(`match (n) where id(n)=${req.body.identity} set n.patterns='${JSON.stringify(patterns)}'`).then(() => {
+                session.run(`match (n) where id(n)=${identity} set n.patterns='${JSON.stringify(patterns)}'`).then(() => {
                     session.close();
                     res.send(null);
                 });
             });
         })
         .post(/modify$/i, (req, res) => {
-            let route = JSON.parse(req.body.route),
+            let {route} = req.body,
                 data = route.reduce((a, b) => a[b], router);
             if (data.table) {
                 let session = neo4j_driver.session(),
@@ -193,13 +192,6 @@
                 });
                 else mission();
             }
-        })
-        .post(/special\/train/i, (req, res) => {
-            console.log(path);
-            res.send(JSON.stringify({
-                success: false,
-                message: '算法尚未对接'
-            }));
         })
         .post(/special\/classify$/i, (req, res) => {
             res.send(JSON.stringify({
