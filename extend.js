@@ -1,7 +1,18 @@
-(() => {
+(f => {
     'use strict';
 
-    this.promise = (...args) => new Promise(...args);
+    try {
+        f(window);
+    } catch (e) {
+    }
+    try {
+        f(global);
+    } catch (e) {
+    }
+})((global) => {
+    'use strict';
+
+    global.promise = (...args) => new Promise(...args);
     Promise.every = function (callbacks) {
         return new Promise((resolve) => {
             let results = [],
@@ -16,4 +27,4 @@
             iterate(0);
         });
     };
-})();
+});

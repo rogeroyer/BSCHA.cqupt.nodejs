@@ -74,13 +74,12 @@
             }));
         })
         .post(/query$/i, (req, res) => {
-            console.log(typeof req.body.route, req.body.route);
-            let {route = [], identity = null} = req.body;
+            let {route = []} = req.body;
             let data = route.reduce((a, b) => a[b], router);
             if (data.table) {
                 let session = neo4j_driver.session();
                 session.run(`match (:root{name:'BSCHA'})${route.slice(0, route.length - 1).map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:specialize]->(n:class{name:'${route[route.length - 1]}'}) return n`).then(({records: [service]}) => {
-                    session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) ${identity ? `where id(n)=${identity}` : ''} return n`).then(({records}) => {
+                    session.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) return n`).then(({records}) => {
                         session.close();
                         data.table.service = service._fields[0];
                         data.table.records = records.map(record => record._fields[0]);

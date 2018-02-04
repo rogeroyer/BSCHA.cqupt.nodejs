@@ -11,10 +11,7 @@
             })(),
             state = {
                 route: [],
-                paginate: {
-                    limit: 20,
-                    page: 1
-                }
+                limit: 20
             },
             dictionary;
         Object.assign(state, state_merge);
@@ -243,28 +240,6 @@
                         $('<tr/>').append([
                             $('<th/>', {
                                 scope: 'col'
-                            }).self(th => {
-                                if (data.table.special) switch (data.table.special) {
-                                    case 'classify':
-                                        $(th).append($('<button>', {
-                                            type: 'button',
-                                            class: 'btn btn-dark btn-sm'
-                                        }).text('分类').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
-                                            let $checked = $(tbody).find('input:checkbox:checked');
-                                            if ($checked.length && confirm('对选定的样本分类？')) {
-                                                $('#requesting_mask').show();
-                                                $.post('special/classify', {
-                                                    identities: Array.from($checked).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
-                                                }, (data) => {
-                                                    $('#requesting_mask').hide();
-                                                    data = JSON.parse(data);
-                                                    if (!data.success) alert(data.message);
-                                                    else location.href = location.href;
-                                                });
-                                            }
-                                        })));
-                                        break;
-                                }
                             }),
                             $('<th/>', {
                                 scope: 'col'
@@ -314,6 +289,8 @@
                             })),
                             $('<th/>', {
                                 scope: 'col'
+                            }).css({
+                                whiteSpace: 'nowrap'
                             }).text('编号'),
                             ...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
                                 scope: 'col'
@@ -383,7 +360,7 @@
                                                 text = value.replace(/\n/g, '<br/>');
                                                 break;
                                             case 'refer':
-                                                text = refers[field.key][value].properties[field.refer.key];
+                                                text = refers[field.key][value] ? refers[field.key][value].properties[field.refer.key] : '';
                                                 break;
                                             default:
                                                 text = '';
@@ -455,58 +432,54 @@
                                         }
                                     })),
                                 ])),
-                                $('<tr/>').append([
-                                    $('<td/>').append($('<button/>', {
-                                        type: 'button',
-                                        class: 'btn btn-primary btn-sm'
-                                    }).text('确认').click(e => {
-                                        $(e.target).parents('tr:first').self(tr => {
-                                            let properties = {}, errors = [];
-                                            Array.from($(tr).find(':input,textarea,select')).reduce((properties, input) => {
-                                                let name = $(input).attr('name'), value = $(input).val(), pattern = patterns[name];
-                                                if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${dictionary[name]} 不符合 /^ ${pattern} $/`);
-                                                else properties[name] = value;
-                                                return properties;
-                                            }, properties);
-                                            if (errors.length) alert(errors.join('\n'));
-                                            else {
-                                                $('#requesting_mask').show();
-                                                $.post('create', {
-                                                    route: state.route,
-                                                    properties: properties
-                                                }, (data) => {
-                                                    $('#requesting_mask').hide();
-                                                    data = JSON.parse(data);
-                                                    if (data.success) location.href = location.href;
-                                                    else alert(data.message);
-                                                });
-                                            }
-                                        });
-                                    })),
-                                    $('<td/>'),
-                                    ...data.table.head.filter(field => (!field.hide)).map(field => $('<td>').self(td => {
-                                        if (field.input) $(td).$generateInput(field);
-                                    })),
-                                    $('<td/>').append($('<button/>', {
-                                        type: 'button',
-                                        class: 'btn btn-secondary btn-sm'
-                                    }).text('取消').click(e => {
-                                        $(e.target).parents('tr:first').self(tr => {
-                                            $(tr).next().show();
-                                            $(tr).hide();
-                                        });
-                                    }))
-                                ]).hide(),
                                 $('<tr/>').append($('<td/>', {
                                     colspan: 999
                                 }).append($('<button/>', {
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm'
                                 }).text('创建').click(e => {
-                                    $(e.target).parents('tr:first').self(tr => {
-                                        $(tr).prev().show();
-                                        $(tr).hide();
-                                    });
+                                    $(e.target).parents('tr:first').hide().parents('tbody:first').append($('<tr/>').append([
+                                        $('<td/>').append($('<button/>', {
+                                            type: 'button',
+                                            class: 'btn btn-primary btn-sm'
+                                        }).text('确认').click(e => {
+                                            $(e.target).parents('tr:first').self(tr => {
+                                                let properties = {}, errors = [];
+                                                Array.from($(tr).find(':input,textarea,select')).reduce((properties, input) => {
+                                                    let name = $(input).attr('name'), value = $(input).val(), pattern = patterns[name];
+                                                    if (pattern && !RegExp(`^${pattern}$`).test(value)) errors.push(`${dictionary[name]} 不符合 /^ ${pattern} $/`);
+                                                    else properties[name] = value;
+                                                    return properties;
+                                                }, properties);
+                                                if (errors.length) alert(errors.join('\n'));
+                                                else {
+                                                    $('#requesting_mask').show();
+                                                    $.post('create', {
+                                                        route: state.route,
+                                                        properties: properties
+                                                    }, (data) => {
+                                                        $('#requesting_mask').hide();
+                                                        data = JSON.parse(data);
+                                                        if (data.success) location.href = location.href;
+                                                        else alert(data.message);
+                                                    });
+                                                }
+                                            });
+                                        })),
+                                        $('<td/>'),
+                                        ...data.table.head.filter(field => (!field.hide)).map(field => $('<td>').self(td => {
+                                            if (field.input) $(td).$generateInput(field);
+                                        })),
+                                        $('<td/>').append($('<button/>', {
+                                            type: 'button',
+                                            class: 'btn btn-secondary btn-sm'
+                                        }).text('取消').click(e => {
+                                            let $form_tr = $(e.target).parents('tr:first'),
+                                                $trigger_create_tr = $form_tr.prev();
+                                            $form_tr.remove();
+                                            $trigger_create_tr.show();
+                                        }))
+                                    ]));
                                 })))
                             ])
                         });
