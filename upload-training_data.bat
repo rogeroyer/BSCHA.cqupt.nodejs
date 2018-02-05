@@ -1,1 +1,1 @@
-%~dp0\nnode %~dp0\upload-training_data.js %*
+%~dp0\.private\nnode %~dp0\.private\upload-training_data.js %*
