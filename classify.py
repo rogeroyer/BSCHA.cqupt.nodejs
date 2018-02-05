@@ -120,8 +120,9 @@ def creat_test_set(test_id):
             ALL_feature = []
             file_name = []
             continue_list = []
+#            print(test_id)
             for record in tx.run("match (n) where id(n) in "+test_id+" return n"):
-                
+#                print(record)
                 pattern = re.compile(r'data\': .+?\'')
                 data = pattern.search(str(record.values()[0])).group(0)[len('data\': \''):-1]
                 pattern_id = re.compile(r'Node id=\d+? ')
@@ -174,8 +175,12 @@ if __name__ == '__main__':
         
     
     train_data,label,all_data = creat_train_set()
-#    test_list = sys.argv[1]
-    test_list = "[840,823]"
+    test_list = sys.argv[1]
+#    test_list =  "[1022,1021,1020,1019,1018,1017,1016,1015,1014,1013,1012\
+#    ,1011,1010,998,997,996,995,994,993,992,991,990,989,988,987,986,985,984,983,982,981,980,979,978,977,976,975,974,973,972,971\
+#    ,970,969,968,967,966,965,964,963,962,961,960,959,958,843,842,841,723,722,721,720,719,718,717,716,715,714,713,712,711,710\
+#    ,709,708,707,706,705,704,703,702,701,700,699,698,697,696,695,694,693,692,691,690,689,688,687,686,685,684,683,682,681,680\
+#    ,679,678,677]"
 #    key = "match (n) where id(n) in "+str(test_list)+" return n.id,n.data"
 #    key = "match (n) where id(n) in [2080,2081] return n.id,n.data"
     test_data,file_name,continue_list = creat_test_set(test_list)

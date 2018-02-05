@@ -209,8 +209,8 @@
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
             identities.forEach((v, i) => identities[i] = Number.parseInt(v));
-            child_process.exec(`python classify.py '${JSON.stringify(identities)}'`, (error, stdout, stderr) => {
-                if (error) {
+            child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
+               if (error) {
                     res.send(JSON.stringify({
                         success: false,
                         message: error.toString()
@@ -220,27 +220,26 @@
                         success: false,
                         message: stderr.toString()
                     }));
-                } else {
-                    try {
-                        let data = JSON.parse(stdout);
-                        promise(resolve => {
-                            if (data.success && data.result.length) {
-                                let ns = nd.session();
-                                Promise.all(data.result.map((item, index) => promise(resolve => {
-                                    ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
-                                }))).then(() => {
-                                    ns.close();
-                                    resolve();
-                                });
-                            } else resolve();
-                        }).then(() => res.send(data));
-                    } catch (e) {
-                        res.send(JSON.stringify({
-                            success: false,
-                            message: e.toString()
-                        }));
-                    }
+                } else try {
+                    let data = JSON.parse(stdout);
+                    promise(resolve => {
+                        if (data.success && data.result.length) {
+                            let ns = nd.session();
+                            Promise.all(data.result.map((item, index) => promise(resolve => {
+                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
+                            }))).then(() => {
+                                ns.close();
+                                resolve();
+                            });
+                        } else resolve();
+                    }).then(() => res.send(JSON.stringify(data)));
+                } catch (e) {
+                    res.send(JSON.stringify({
+                        success: false,
+                        message: e.toString()
+                    }));
                 }
+                
             });
         })
         .listen(3530, () => {
