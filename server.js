@@ -1,10 +1,13 @@
 (do {
     'use strict';
 
-    let express = require('express'),
+    const express = require('express'),
         bodyParser = require('body-parser'),
         neo4j = require('neo4j-driver').v1,
-        nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
+        child_process = require('child_process');
+    require('./extend');
+
+    let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
         path = (l => l.slice(0, l.length - 1).join('\\'))(require('path').dirname(require.main.filename).split(/[\\\/]/));
 
     const router = {
@@ -43,12 +46,17 @@
                 head: [
                     {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true},
                     {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
-                    {key: 'classification', output: String.name, default: '未知', special: 'classify', order: true},
+                    {key: 'classification', output: String.name, default: '未知', special: {name: '执行', post: 'classify'}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ]
             }
         }
+    };
+
+    const classification_description = {
+        true: '人类',
+        false: '动物'
     };
 
     express()
@@ -199,10 +207,33 @@
             }
         })
         .post(/special\/classify$/i, (req, res) => {
-            res.send(JSON.stringify({
-                success: false,
-                message: '算法尚未对接'
-            }));
+            let {identities} = req.body;
+            child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
+                try {
+                    console.log(stdout);
+                    let data = JSON.parse(stdout);
+                    promise(resolve => {
+                        if (data.success && data.result.length) {
+                            let ns = nd.session();
+                            Promise.all(data.result.map((item, index) => promise(resolve => {
+                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification=${classification_description[item]}`).then(() => resolve())
+                            }))).then(() => {
+                                ns.close();
+                                resolve();
+                            });
+                        } else resolve();
+                    }).then(() => res.send(data));
+                } catch (e) {
+                    if (error) res.send(JSON.stringify({
+                        success: false,
+                        message: error
+                    }));
+                    else if (stderr.length) res.send(JSON.stringify({
+                        success: false,
+                        message: stderr
+                    }));
+                }
+            });
         })
         .listen(3530, () => {
             console.log('BSCHA listening on port 3530...');

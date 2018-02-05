@@ -332,8 +332,19 @@
                                 else if (field.special) $(th).append($('<button/>', {
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm batch-process'
-                                }).text(dictionary[field.key]).click(e => {
-                                    debugger;
+                                }).text(field.special.name).click(e => {
+                                    let identities = Array.from($(e.target).parents('table:first').children('tbody:first').find(':checkbox:checked')).map(input => Number.parseInt($(input).parents('tr:first').children('td:eq(1)').text()));
+                                    if (identities.length && confirm('确定' + field.special.name + '?')) {
+                                        $('#requesting_mask').show();
+                                        $.post('special/' + field.special.post, {
+                                            route: field.route,
+                                            identities
+                                        }, result => {
+                                            $('#requesting_mask').hide();
+                                            alert(result.message);
+                                            if (result.success) setTimeout(() => location.href = location.href, 300);
+                                        });
+                                    }
                                 }));
                             })),
                             $('<th/>', {
@@ -532,7 +543,15 @@
                             class: 'page-item'
                         }).append($('<a/>', {
                             class: 'page-link'
-                        }).text('上一页')),
+                        }).text('上一页')).self(li => {
+                            if (Math.ceil(state.skip / state.limit) + 1 > 1) {
+                                $(li).children('a:first').click(e => {
+                                    location.href = location_prefix + JSON.stringify(Object.assign(state, {
+                                        skip: state.skip - state.limit
+                                    }));
+                                });
+                            } else $(li).addClass('disabled');
+                        }),
                         $('<li/>', {
                             class: 'page-item'
                         }).append($('<a/>', {
@@ -540,17 +559,33 @@
                         }).css({
                             cursor: 'auto'
                         }).append([
-                            $('<input/>', {type: 'text'}).val(Math.ceil(state.skip / state.limit) + 1).width('30px'),
+                            $('<input/>', {type: 'text'}).val(Math.ceil(state.skip / state.limit) + 1).width('30px').change(e => {
+                                location.href = location_prefix + JSON.stringify(Object.assign(state, {
+                                    skip: ($(e.target).val() - 1) * state.limit
+                                }));
+                            }),
                             ' / ',
                             $('<span/>').text(Math.ceil(data.table.count / state.limit)),
                             ' / ',
-                            $('<input/>', {type: 'text'}).val(state.limit).width('30px')
+                            $('<input/>', {type: 'text'}).val(state.limit).width('30px').change(e => {
+                                let limit = Number.parseInt($(e.target).val());
+                                location.href = location_prefix + JSON.stringify(Object.assign(state, {
+                                    skip: 0,
+                                    limit: limit
+                                }));
+                            })
                         ])),
                         $('<li/>', {
                             class: 'page-item'
                         }).append($('<a/>', {
                             class: 'page-link'
-                        }).text('下一页'))
+                        }).text('下一页')).self(li => {
+                            if (Math.ceil(state.skip / state.limit) + 1 < Math.ceil(data.table.count / state.limit)) {
+                                $(li).children('a:first').click(e => location.href = location_prefix + JSON.stringify(Object.assign(state, {
+                                    skip: state.skip + state.limit
+                                })));
+                            } else $(li).addClass('disabled');
+                        })
                     ])))
                 ]);
                 helper.refreshBatchProcessTriggers();
