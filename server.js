@@ -55,8 +55,8 @@
     };
 
     const classification_description = {
-        true: '人类',
-        false: '动物'
+        'true': '人类',
+        'false': '动物'
     };
 
     express()
@@ -209,22 +209,7 @@
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
             child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
-                try {
-                    console.log(stdout);
-                    let data = JSON.parse(stdout);
-                    promise(resolve => {
-                        if (data.success && data.result.length) {
-                            let ns = nd.session();
-                            Promise.all(data.result.map((item, index) => promise(resolve => {
-                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification=${classification_description[item]}`).then(() => resolve())
-                            }))).then(() => {
-                                ns.close();
-                                resolve();
-                            });
-                        } else resolve();
-                    }).then(() => res.send(data));
-                } catch (e) {
-                    if (error) res.send(JSON.stringify({
+                	 if (error) res.send(JSON.stringify({
                         success: false,
                         message: error
                     }));
@@ -232,6 +217,22 @@
                         success: false,
                         message: stderr
                     }));
+                else{
+                	 let data = JSON.parse(stdout);
+                    promise(resolve => {
+                        if (data.success && data.result.length) {
+                            let ns = nd.session();
+                            Promise.all(data.result.map((item, index) => promise(resolve => {
+                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
+                            }))).then(() => {
+                                ns.close();
+                                resolve();
+                            });
+                        } else resolve();
+                    }).then(() =>{
+                    	data.success=JSON.parse(data.success);
+                     res.send(data);
+                     });
                 }
             });
         })
