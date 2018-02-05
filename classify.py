@@ -165,7 +165,7 @@ def model_G(train_data,label,test_data,test_remain_file_name):
     anss = pd.DataFrame()
     anss['file'] = test_remain_file_name
     anss['pro'] = predict
-    anss['label'] = anss['pro'].map(lambda x:'true' if x>0.7 else 'false')
+    anss['label'] = anss['pro'].map(lambda x:True if x>0.75 else False)
 #    anss.to_csv('read_test.csv',index=None)
     return anss
     
@@ -174,8 +174,8 @@ if __name__ == '__main__':
         
     
     train_data,label,all_data = creat_train_set()
-    test_list = sys.argv[1]
-#    test_list = "[840,823]"
+#    test_list = sys.argv[1]
+    test_list = "[840,823]"
 #    key = "match (n) where id(n) in "+str(test_list)+" return n.id,n.data"
 #    key = "match (n) where id(n) in [2080,2081] return n.id,n.data"
     test_data,file_name,continue_list = creat_test_set(test_list)
@@ -187,14 +187,13 @@ if __name__ == '__main__':
     
     json_ans = []
     for parms_order in test_list.strip('\"[').strip(']\"').split(','):
-        json_ans.append(ans_dict.get(parms_order,'false'))
+        json_ans.append(not not ans_dict.get(parms_order,False))
         
-        
-    return_json = dict()
-    return_json["success"]='true'
-    return_json["message"]='分类完成'
+    
+    return_json = {}
+    return_json["success"]=True
+    return_json["message"]="分类完成"
     return_json["result"]=json_ans
-
     return_json = json.dumps(return_json)
     print(return_json)
     

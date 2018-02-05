@@ -23,8 +23,13 @@
                 asc: 'desc',
                 desc: 'asc'
             },
-            location_prefix = location.href.match(/^.*\?/)[0],
+            location_prefix,
             dictionary;
+        try{
+            location_prefix= location.href.match(/^.*\?/)[0]
+        }catch(e){
+            location_prefix=location.href;
+        }
         Object.assign(state, state_merge);
         $.ajaxSetup({async: false});
         $.getScript('extend.js');
