@@ -46,13 +46,21 @@
                 head: [
                     {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true},
                     {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
-                    {key: 'classification', output: String.name, default: '未知', special: {name: '执行', post: 'classify'}, order: true},
+                    {key: 'classification', output: String.name, default: '未知', special: {name: '分类', post: 'classify'}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ]
             }
         }
     };
+
+    const role_type = 'guest';
+    const menu = [
+        {name: '训练集', type: 'form', route: ['species']},
+        {name: '测试集', type: 'form', route: ['species']},
+        {name: '上传样本', type: 'system', cmd: ''},
+        {name: '更新系统', type: 'system', cmd: ''}
+    ];
 
     const classification_description = {
         [true]: '人类',
@@ -210,7 +218,7 @@
             let {identities} = req.body;
             identities.forEach((v, i) => identities[i] = Number.parseInt(v));
             child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
-               if (error) {
+                if (error) {
                     res.send(JSON.stringify({
                         success: false,
                         message: error.toString()
@@ -226,7 +234,7 @@
                         if (data.success && data.result.length) {
                             let ns = nd.session();
                             Promise.all(data.result.map((item, index) => promise(resolve => {
-                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
+                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}',n.update_dt=${ Math.floor(Date.now() / 1000)}`).then(() => resolve())
                             }))).then(() => {
                                 ns.close();
                                 resolve();
@@ -239,7 +247,7 @@
                         message: e.toString()
                     }));
                 }
-                
+
             });
         })
         .listen(3530, () => {

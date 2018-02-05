@@ -25,10 +25,10 @@
             },
             location_prefix,
             dictionary;
-        try{
-            location_prefix= location.href.match(/^.*\?/)[0]
-        }catch(e){
-            location_prefix=location.href;
+        try {
+            location_prefix = location.href.match(/^.*\?/)[0]
+        } catch (e) {
+            location_prefix = location.href;
         }
         Object.assign(state, state_merge);
         $.ajaxSetup({async: false});
@@ -136,7 +136,7 @@
                 display: 'flex',
                 alignItems: 'center'
             }).append([
-                $('<div/>').css({
+                /*$('<div/>').css({
                     marginLeft: '.75rem'
                 }).append($('<a/>').text('Home').self(a => {
                     if (state.route.length) $(a).attr({
@@ -168,7 +168,7 @@
                     }).one('click', (e) => setTimeout(() => {
                         $(e.target).trigger('click')
                     }, 0)));
-                })
+                })*/
             ]);
             $(root).$frame('foot').css({
                 display: 'flex',
@@ -446,13 +446,15 @@
                                     $('<td/>').css({
                                         color: 'grey'
                                     }).text(record.identity.low),
-                                    ...data.table.head.filter(field => !field.hide).map(field => $('<td/>').self(td => {
+                                    ...data.table.head.filter(field => !field.hide).map(field => $('<td/>').css({
+                                        whiteSpace: 'nowrap'
+                                    }).self(td => {
                                         let output = wrap(field.output),
                                             value = record.properties[field.key] || '',
                                             text;
                                         switch (output[0]) {
                                             case Date.name:
-                                                text = new Date(value.low * 1000).toJSON().replace(/(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+).*!/, (_, y, m, d, h, i, s) => `${y}-${m}-${d} ${h}:${i}:${s}`);
+                                                text = new Date(value.low * 1000).toJSON().replace(/^[^\d]*(\d+)\-(\d+)\-(\d+)[^\d]*(\d+)\:(\d+)\:(\d+).*$/, '$1-$2-$3 $4:$5:$6');
                                                 break;
                                             case Number.name:
                                                 text = value.low;
@@ -565,21 +567,25 @@
                         }).css({
                             cursor: 'auto'
                         }).append([
+                            $('<span/>').css({color: 'gray'}).text('第 '),
                             $('<input/>', {type: 'text'}).val(Math.ceil(state.skip / state.limit) + 1).width('30px').change(e => {
                                 location.href = location_prefix + JSON.stringify(Object.assign(state, {
                                     skip: ($(e.target).val() - 1) * state.limit
                                 }));
                             }),
-                            ' / ',
-                            $('<span/>').text(Math.ceil(data.table.count / state.limit)),
-                            ' / ',
+                            $('<span/>').css({color: 'gray'}).text(' 页 共 '),
+                            Math.ceil(data.table.count / state.limit),
+                            $('<span/>').css({color: 'gray'}).text(' 页 每页 '),
                             $('<input/>', {type: 'text'}).val(state.limit).width('30px').change(e => {
                                 let limit = Number.parseInt($(e.target).val());
                                 location.href = location_prefix + JSON.stringify(Object.assign(state, {
                                     skip: 0,
                                     limit: limit
                                 }));
-                            })
+                            }),
+                            $('<span/>').css({color: 'gray'}).text(' 项 共 '),
+                            data.table.count,
+                            $('<span/>').css({color: 'gray'}).text(' 项'),
                         ])),
                         $('<li/>', {
                             class: 'page-item'
