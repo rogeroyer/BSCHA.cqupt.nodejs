@@ -194,7 +194,16 @@
                     }).text('上传样本'),
                     $('<a/>', {
                         class: 'nav-item nav-link'
-                    }).text('更新系统')
+                    }).text('更新系统'),
+                    /*$('<a/>', {
+                        class: 'nav-item nav-link'
+                    }).css({
+                        cursor: 'pointer'
+                    }).text('关闭系统').click(e => {
+                        if (confirm("确定关闭系统？")) {
+                            $.post('system/shutdown');
+                        }
+                    })*/
                 ])
             ]);
             $(root).$frame('foot').css({
@@ -342,7 +351,7 @@
                             ...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
                                 scope: 'col'
                             }).self(th => {
-                                if (field.key in patterns) $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
+                                /*if (field.key in patterns) $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
                                     $(th).$generateModifier({
                                         field: {key: '', input: 'textarea'},
                                         value: patterns[field.key],
@@ -360,7 +369,10 @@
                                             }
                                         }
                                     });
-                                });
+                                });*/
+                                if (field.format) $(th).css({
+                                    color: 'grey'
+                                }).text('格式：' + field.format);
                                 else if (field.special) $(th).append($('<button/>', {
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm batch-process'

@@ -31,8 +31,8 @@
             table: {
                 head: [
                     {key: 'species', output: 'refer', input: 'refer', refer: {route: ['species'], key: 'name'}, order: true},
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true},
-                    {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
+                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '非空。'},
+                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '多行，每行2个数字。'},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
@@ -44,8 +44,8 @@
             table: {
                 special: 'classify',
                 head: [
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true},
-                    {key: 'data', output: [String.name, {long: true}], input: 'textarea'},
+                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '非空。'},
+                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '多行，每行2个数字。'},
                     {key: 'classification', output: String.name, default: '未知', special: {name: '分类', post: 'classify'}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
@@ -242,6 +242,12 @@
 
             });
         })
+        /*.post(/system\/shutdown$/i, () => {
+            console.log('Please terminate.');
+            // child_process.exec('taskkill /f /t /im chrome.exe');
+            // child_process.exec('taskkill /f /t /im node.exe');
+            // child_process.exec('taskkill /f /t /im java.exe');
+        })*/
         .listen(3530, () => {
             console.log('BSCHA listening on port 3530...');
         });

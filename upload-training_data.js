@@ -66,7 +66,7 @@
                                     input: process.stdin,
                                     output: process.stdout
                                 });
-                                let choose = () => rl.question(`物种 ${name} 不存在！请输入[1:修改物种名称，2:创建该物种]：`, answer => {
+                                /*let choose = () => rl.question(`物种 ${name} 不存在！请输入[1:修改物种名称，2:创建该物种]：`, answer => {
                                     switch (answer) {
                                         case '1':
                                             let readName = () => rl.question('请输入物种名: ', answer => {
@@ -88,7 +88,19 @@
                                             ).then(({records}) => resolve(Object.assign(species, {id: records[0]._fields[0].low})));
                                             break;
                                         default:
-                                            console.warn('错误的输入！')
+                                            console.warn('错误的输入！');
+                                            choose();
+                                    }
+                                });*/
+                                let choose = () => rl.question(`物种 ${name} 不存在！请选择[1:人类，2:动物]：`, answer => {
+                                    switch (answer) {
+                                        case '1':
+                                        case '2':
+                                            rl.close();
+                                            check({'1': '人类', '2': '动物'}[answer]);
+                                            break;
+                                        default:
+                                            console.warn('错误的输入！');
                                             choose();
                                     }
                                 });
