@@ -209,7 +209,7 @@
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
             identities.forEach((v, i) => identities[i] = Number.parseInt(v));
-            child_process.exec(`python test.py '${JSON.stringify(identities)}'`, (error, stdout, stderr) => {
+            child_process.exec(`python classify.py '${JSON.stringify(identities)}'`, (error, stdout, stderr) => {
                 if (error) {
                     res.send(JSON.stringify({
                         success: false,
