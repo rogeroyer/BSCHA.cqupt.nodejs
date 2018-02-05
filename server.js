@@ -54,14 +54,6 @@
         }
     };
 
-    const role_type = 'guest';
-    const menu = [
-        {name: '训练集', type: 'form', route: ['species']},
-        {name: '测试集', type: 'form', route: ['species']},
-        {name: '上传样本', type: 'system', cmd: ''},
-        {name: '更新系统', type: 'system', cmd: ''}
-    ];
-
     const classification_description = {
         [true]: '人类',
         [false]: '动物'

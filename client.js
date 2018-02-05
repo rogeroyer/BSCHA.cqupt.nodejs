@@ -169,6 +169,33 @@
                         $(e.target).trigger('click')
                     }, 0)));
                 })*/
+
+                $('<nav/>', {
+                    class: 'nav nav-pills nav-justified'
+                }).css({
+                    width: '100%',
+                    paddingLeft: '10px',
+                    paddingRight: '10px'
+                }).append([
+                    $('<a/>', {
+                        class: 'nav-item nav-link' + (!state.route[0] ? ' active' : ''),
+                        href: '/'
+                    }).text('Home'),
+                    $('<a/>', {
+                        class: 'nav-item nav-link' + (state.route[0] === 'training' ? ' active' : ''),
+                        href: '?' + JSON.stringify({route: ['training']})
+                    }).text('训练集'),
+                    $('<a/>', {
+                        class: 'nav-item nav-link' + (state.route[0] === 'applying' ? ' active' : ''),
+                        href: '?' + JSON.stringify({route: ['applying']})
+                    }).text('测试集'),
+                    $('<a/>', {
+                        class: 'nav-item nav-link'
+                    }).text('上传样本'),
+                    $('<a/>', {
+                        class: 'nav-item nav-link'
+                    }).text('更新系统')
+                ])
             ]);
             $(root).$frame('foot').css({
                 display: 'flex',
@@ -265,9 +292,8 @@
                                 type: 'button',
                                 class: 'btn btn-primary btn-sm'
                             }).text('新增').click(e => {
-                                $(e.target).prop({
-                                    disabled: true
-                                }).parents('tr:first').self(tr => {
+                                let $create = $(e.target);
+                                $create.prop('disabled', true).parents('tr:first').self(tr => {
                                     $('<tr/>').append([
                                         $('<th/>'),
                                         $('<th/>').append($('<button/>', {
@@ -308,6 +334,7 @@
                                             class: 'btn btn-secondary btn-sm'
                                         }).text('取消').click(e => {
                                             $(e.target).parents('tr:first').remove();
+                                            $create.prop('disabled', false);
                                         }))
                                     ]).insertAfter($(tr))
                                 }).append();

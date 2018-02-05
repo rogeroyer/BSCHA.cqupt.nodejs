@@ -1,1 +1,1 @@
-%~dp0\.private\nnode %~dp0\.private\upload-applying_data.js %*
+%~dp0\nnode %~dp0\upload-applying_data.js %*
