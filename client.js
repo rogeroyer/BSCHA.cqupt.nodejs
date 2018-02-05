@@ -341,6 +341,7 @@
                                             identities
                                         }, result => {
                                             $('#requesting_mask').hide();
+                                            result = JSON.parse(result);
                                             alert(result.message);
                                             if (result.success) setTimeout(() => location.href = location.href, 300);
                                         });

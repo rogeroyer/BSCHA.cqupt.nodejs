@@ -55,8 +55,8 @@
     };
 
     const classification_description = {
-        'true': '人类',
-        'false': '动物'
+        [true]: '人类',
+        [false]: '动物'
     };
 
     express()
@@ -208,31 +208,38 @@
         })
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
-            child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
-                	 if (error) res.send(JSON.stringify({
+            identities.forEach((v, i) => identities[i] = Number.parseInt(v));
+            child_process.exec(`python test.py '${JSON.stringify(identities)}'`, (error, stdout, stderr) => {
+                if (error) {
+                    res.send(JSON.stringify({
                         success: false,
-                        message: error
+                        message: error.toString()
                     }));
-                    else if (stderr.length) res.send(JSON.stringify({
+                } else if (stderr.length) {
+                    res.send(JSON.stringify({
                         success: false,
-                        message: stderr
+                        message: stderr.toString()
                     }));
-                else{
-                	 let data = JSON.parse(stdout);
-                    promise(resolve => {
-                        if (data.success && data.result.length) {
-                            let ns = nd.session();
-                            Promise.all(data.result.map((item, index) => promise(resolve => {
-                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
-                            }))).then(() => {
-                                ns.close();
-                                resolve();
-                            });
-                        } else resolve();
-                    }).then(() =>{
-                    	data.success=JSON.parse(data.success);
-                     res.send(data);
-                     });
+                } else {
+                    try {
+                        let data = JSON.parse(stdout);
+                        promise(resolve => {
+                            if (data.success && data.result.length) {
+                                let ns = nd.session();
+                                Promise.all(data.result.map((item, index) => promise(resolve => {
+                                    ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}'`).then(() => resolve())
+                                }))).then(() => {
+                                    ns.close();
+                                    resolve();
+                                });
+                            } else resolve();
+                        }).then(() => res.send(data));
+                    } catch (e) {
+                        res.send(JSON.stringify({
+                            success: false,
+                            message: e.toString()
+                        }));
+                    }
                 }
             });
         })
