@@ -36,7 +36,8 @@
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
-                upload: true
+                upload: true,
+                download: true
             }
         },
         applying: {
@@ -49,7 +50,9 @@
                     {key: 'classification', output: String.name, default: '未知', special: {name: '分类', post: 'classify'}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
-                ]
+                ],
+                upload: true,
+                download: true
             }
         }
     };
@@ -242,11 +245,21 @@
 
             });
         })
-        /*.post(/system\/shutdown$/i, () => {
-            console.log('Please terminate.');
-            // child_process.exec('taskkill /f /t /im chrome.exe');
-            // child_process.exec('taskkill /f /t /im node.exe');
-            // child_process.exec('taskkill /f /t /im java.exe');
+        .post(/upload\/training$/i, (req, res) => {
+            child_process.exec('start nnode.bat upload-training_data.js', () => {
+                res.send(null);
+            });
+        })
+        .post(/upload\/applying/i, (req, res) => {
+            child_process.exec('start nnode.bat upload-applying_data.js', () => {
+                res.send(null);
+            });
+        })
+        /*.post(/system\/close-client$/i, () => {
+            console.log('#BSCHA: Close client.');
+        })
+        .post(/system\/shutdown$/i, () => {
+            console.log('#BSCHA: Terminate system.');
         })*/
         .listen(3530, () => {
             console.log('BSCHA listening on port 3530...');

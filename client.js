@@ -189,12 +189,9 @@
                         class: 'nav-item nav-link' + (state.route[0] === 'applying' ? ' active' : ''),
                         href: '?' + JSON.stringify({route: ['applying']})
                     }).text('测试集'),
-                    $('<a/>', {
+                    /*$('<a/>', {
                         class: 'nav-item nav-link'
-                    }).text('上传样本'),
-                    $('<a/>', {
-                        class: 'nav-item nav-link'
-                    }).text('更新系统'),
+                    }).text('更新系统')*/
                     /*$('<a/>', {
                         class: 'nav-item nav-link'
                     }).css({
@@ -268,9 +265,11 @@
             refreshBatchProcessTriggers: () => $('.batch-process').prop('disabled', !$('tbody').find(':checkbox:checked').length)
         };
 
+        $('#requesting_mask').show();
         $.post('query', state, data => {
+            $('#requesting_mask').hide();
             data = JSON.parse(data);
-            $('body').$frame('root main main navigator').children('div.dropdown').self((div) => {
+            /*$('body').$frame('root main main navigator').children('div.dropdown').self((div) => {
                 if (data.services.length) {
                     $(div).append($('<div/>', {
                         class: 'dropdown-menu'
@@ -286,8 +285,22 @@
                 } else $(div).children('button').prop({
                     disabled: true
                 }).hide();
-            });
+            });*/
             if (data.table) {
+                if (data.table.upload) {
+                    $('body').$frame('root main main navigator').children('nav:first').append($('<a/>', {
+                        class: 'nav-item nav-link'
+                    }).css({
+                        cursor: 'pointer'
+                    }).text('上传').click(e => {
+                        $('#requesting_mask').show();
+                        $.post('upload/' + state.route[0], {}, () => {
+                            location.href = location_prefix + JSON.stringify(Object.assign(state, {
+                                order: 'create_dt'
+                            }));
+                        })
+                    }));
+                }
                 let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
                 $('body').$frame('root main main main').html('').append([
                     $('<table/>', {
