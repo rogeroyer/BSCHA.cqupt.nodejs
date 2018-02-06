@@ -11,7 +11,7 @@
             input: process.stdin,
             output: process.stdout
         });
-        rl.question('请输入或拖拽数据包：', package_path => {
+        rl.question('请输入或拖拽测试数据包：', package_path => {
             rl.close();
             let package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
             if (fs.statSync(package_path).isDirectory()) {

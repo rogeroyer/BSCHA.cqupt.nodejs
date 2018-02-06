@@ -4,7 +4,8 @@
     const express = require('express'),
         bodyParser = require('body-parser'),
         neo4j = require('neo4j-driver').v1,
-        child_process = require('child_process');
+        child_process = require('child_process'),
+        fs = require('fs');
     require('./extend');
 
     let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
@@ -36,8 +37,7 @@
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
-                upload: true,
-                download: true
+                upload: true
             }
         },
         applying: {
@@ -52,7 +52,7 @@
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
                 upload: true,
-                download: true
+                download: ['name', 'classification']
             }
         }
     };
@@ -83,6 +83,14 @@
                 create_dt: '创建时间',
                 update_dt: '修改时间'
             }));
+        })
+        .post(/query\/other_identities$/, (req, res) => {
+            let {route = [], identities = []} = req.body;
+            let ns = nd.session();
+            ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where not (id(n) in [${identities.join(',')}]) return id(n)`).then(({records}) => {
+                ns.close();
+                res.send(JSON.stringify(records.map(record => record._fields[0].low)));
+            });
         })
         .post(/query$/i, (req, res) => {
             let {route = [], skip = 0, limit, order, arrange = 'desc'} = req.body;
@@ -144,7 +152,7 @@
             }
         })
         .post(/delete$/i, (req, res) => {
-            let {route, identities} = req.body,
+            let {route, identities = []} = req.body,
                 data = route.reduce((a, b) => a[b], router);
             if (identities.length) {
                 let ns = nd.session(),
@@ -211,7 +219,6 @@
         })
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
-            identities.forEach((v, i) => identities[i] = Number.parseInt(v));
             child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
                 if (error) {
                     res.send(JSON.stringify({
@@ -242,7 +249,6 @@
                         message: e.toString()
                     }));
                 }
-
             });
         })
         .post(/upload\/training$/i, (req, res) => {
@@ -253,6 +259,23 @@
         .post(/upload\/applying/i, (req, res) => {
             child_process.exec('start nnode.bat upload-applying_data.js', () => {
                 res.send(null);
+            });
+        })
+        .post(/download$/i, (req, res) => {
+            let {route, identities = []} = req.body,
+                data = route.reduce((a, b) => a[b], router);
+            let ns = nd.session();
+            ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
+                ns.close();
+                fs.writeFile('download_cache\\download.data', records.map(record => record._fields.join('\t')).join('\n'), (err) => {
+                    res.send(JSON.stringify(err ? {
+                        success: false,
+                        message: err.toString()
+                    } : {
+                        success: true,
+                        file: 'download_cache/download.data'
+                    }));
+                });
             });
         })
         /*.post(/system\/close-client$/i, () => {

@@ -100,7 +100,9 @@
                 top: 0,
                 width: '100%',
                 height: '100%'
-            }).hide()
+            }).append($('<img/>', {
+                src: 'images/TZcL7Cc.gif'
+            }).width('100%').height('100%').css('opacity', '0.15')).hide()
         ]);
 
         $.fn.self = function (callback) {
@@ -262,7 +264,9 @@
         };
 
         let helper = {
-            refreshBatchProcessTriggers: () => $('.batch-process').prop('disabled', !$('tbody').find(':checkbox:checked').length)
+            refreshBatchProcessTriggers: (data) => {
+                $('.batch-process').prop('disabled', !($('tbody').find(':checkbox:checked').length || ($(':checkbox[name=others]').prop('checked') && data.table.count > state.limit)))
+            }
         };
 
         $('#requesting_mask').show();
@@ -298,7 +302,40 @@
                             location.href = location_prefix + JSON.stringify(Object.assign(state, {
                                 order: 'create_dt'
                             }));
-                        })
+                        });
+                    }));
+                }
+                if (data.table.download) {
+                    $('body').$frame('root main main navigator').children('nav:first').append($('<button/>', {
+                        class: 'nav-item nav-link batch-process'
+                    }).css({
+                        borderWidth: 0,
+                        backgroundColor: 'inherit'
+                    }).text('下载').click(e => {
+                        $('#requesting_mask').show();
+                        let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
+                        promise(resolve => {
+                            if ($(':checkbox[name=others]').prop('checked')) {
+                                $.post('query/other_identities', {
+                                    route: state.route,
+                                    identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
+                                }, others => {
+                                    others = JSON.parse(others);
+                                    identities = [...identities, ...others];
+                                    resolve();
+                                });
+                            } else resolve();
+                        }).then(() => {
+                            $.post('download', {
+                                route: state.route,
+                                identities
+                            }, sent => {
+                                $('#requesting_mask').hide();
+                                sent = JSON.parse(sent);
+                                if (sent.success) location.assign('http://localhost:3530/' + sent.file);
+                                else alert(sent.message)
+                            });
+                        });
                     }));
                 }
                 let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
@@ -307,9 +344,10 @@
                         class: 'table'
                     }).append($('<thead/>').append([
                         $('<tr/>').append([
-                            $('<th/>', {
-                                scope: 'col'
-                            }),
+                            $('<th/>').append($('<input>', {
+                                type: 'checkbox',
+                                name: 'others'
+                            }).change(e => helper.refreshBatchProcessTriggers(data))),
                             $('<th/>').append($('<button/>', {
                                 type: 'button',
                                 class: 'btn btn-primary btn-sm'
@@ -361,9 +399,7 @@
                                     ]).insertAfter($(tr))
                                 }).append();
                             })),
-                            ...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
-                                scope: 'col'
-                            }).self(th => {
+                            ...data.table.head.filter(field => !field.hide).map(field => $('<th/>').self(th => {
                                 /*if (field.key in patterns) $(th).text(`/^ ${patterns[field.key]} $/`).dblclick(e => {
                                     $(th).$generateModifier({
                                         field: {key: '', input: 'textarea'},
@@ -390,62 +426,81 @@
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm batch-process'
                                 }).text(field.special.name).click(e => {
-                                    let identities = Array.from($(e.target).parents('table:first').children('tbody:first').find(':checkbox:checked')).map(input => Number.parseInt($(input).parents('tr:first').children('td:eq(1)').text()));
-                                    if (identities.length && confirm('确定' + field.special.name + '?')) {
+                                    if (confirm('对所选的项' + field.special.name + '?')) {
                                         $('#requesting_mask').show();
-                                        $.post('special/' + field.special.post, {
-                                            route: field.route,
-                                            identities
-                                        }, result => {
-                                            $('#requesting_mask').hide();
-                                            result = JSON.parse(result);
-                                            alert(result.message);
-                                            if (result.success) setTimeout(() => location.href = location.href, 300);
+                                        let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
+                                        promise(resolve => {
+                                            if ($(':checkbox[name=others]').prop('checked')) {
+                                                $.post('query/other_identities', {
+                                                    route: state.route,
+                                                    identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
+                                                }, others => {
+                                                    others = JSON.parse(others);
+                                                    identities = [...identities, ...others];
+                                                    resolve();
+                                                });
+                                            } else resolve();
+                                        }).then(() => {
+                                            $.post('special/' + field.special.post, {
+                                                route: field.route,
+                                                identities
+                                            }, result => {
+                                                result = JSON.parse(result);
+                                                alert(result.message);
+                                                if (result.success) setTimeout(() => location.href = location.href, 300);
+                                                else $('#requesting_mask').hide();
+                                            });
                                         });
                                     }
                                 }));
                             })),
-                            $('<th/>', {
-                                scope: 'col'
-                            }).append($('<button/>', {
+                            $('<th/>').append($('<button/>', {
                                 class: 'btn btn-danger btn-sm batch-process'
-                            }).text('删除').click(e => $(e.target).parents('table:first').children('tbody').self(tbody => {
-                                let $checked = $(tbody).find('input:checkbox:checked');
-                                if ($checked.length && confirm('确定删除选定的记录？')) {
+                            }).text('删除').click(e => {
+                                if (confirm('确定删除所选的项？')) {
                                     $('#requesting_mask').show();
-                                    $.post('delete', {
-                                        route: state.route,
-                                        identities: Array.from($checked).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
-                                    }, () => {
-                                        $('#requesting_mask').hide();
-                                        location.href = location.href;
+                                    let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
+                                    promise(resolve => {
+                                        if ($(':checkbox[name=others]').prop('checked')) {
+                                            $.post('query/other_identities', {
+                                                route: state.route,
+                                                identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
+                                            }, others => {
+                                                others = JSON.parse(others);
+                                                identities = [...identities, ...others];
+                                                resolve();
+                                            });
+                                        } else resolve();
+                                    }).then(() => {
+                                        $.post('delete', {
+                                            route: state.route,
+                                            identities
+                                        }, () => {
+                                            location.href = location.href;
+                                        });
                                     });
                                 }
-                            })))
+                            }))
                         ]),
                         $('<tr/>').append([
-                            $('<th/>', {
-                                scope: 'col'
-                            }).append($('<a/>').css({
+                            $('<th/>').append($('<a/>').css({
                                 cursor: 'pointer'
                             }).text('全').click(e => {
-                                $(e.target).parents('table:first').children('tbody').find('input:checkbox').prop({
+                                $('input:checkbox').prop({
                                     checked: true
                                 });
-                                helper.refreshBatchProcessTriggers();
+                                helper.refreshBatchProcessTriggers(data);
                             })).append('/').append($('<a/>').css({
                                 cursor: 'pointer'
                             }).text('反').click(e => {
-                                for (let cb of Array.from($(e.target).parents('table:first').children('tbody').find('input:checkbox'))) {
+                                for (let cb of Array.from($(':checkbox'))) {
                                     $(cb).prop({
                                         checked: !$(cb).prop('checked')
                                     });
                                 }
-                                helper.refreshBatchProcessTriggers();
+                                helper.refreshBatchProcessTriggers(data);
                             })),
-                            $('<th/>', {
-                                scope: 'col'
-                            }).css({
+                            $('<th/>').css({
                                 whiteSpace: 'nowrap',
                                 cursor: 'pointer'
                             }).text('编号' + (state.order ? '' : arrange_token[state.arrange])).click(e => {
@@ -455,9 +510,7 @@
                                     arrange: arrange_reverse_token[state.arrange]
                                 }))
                             }),
-                            ...data.table.head.filter(field => !field.hide).map(field => $('<th/>', {
-                                scope: 'col'
-                            }).css({
+                            ...data.table.head.filter(field => !field.hide).map(field => $('<th/>').css({
                                 whiteSpace: 'nowrap'
                             }).text(dictionary[field.key]).self(th => {
                                 if (field.order) $(th).css({
@@ -470,9 +523,7 @@
                                     }));
                                 })
                             })),
-                            $('<th/>', {
-                                scope: 'col'
-                            }).text('操作')
+                            $('<th/>').text('操作')
                         ])
                     ])).append($('<tbody/>').self(tbody => {
                         let refers = data.table.head.reduce((refers, rule) => {
@@ -494,7 +545,7 @@
                                 ...data.table.records.map(record => $('<tr/>').append([
                                     $('<td/>').append($('<input/>', {
                                         type: 'checkbox'
-                                    }).change(e => helper.refreshBatchProcessTriggers())),
+                                    }).change(e => helper.refreshBatchProcessTriggers(data))),
                                     $('<td/>').css({
                                         color: 'grey'
                                     }).text(record.identity.low),
@@ -652,7 +703,7 @@
                         })
                     ])))
                 ]);
-                helper.refreshBatchProcessTriggers();
+                helper.refreshBatchProcessTriggers(data);
             }
         });
     });
