@@ -346,7 +346,10 @@
                         $('<tr/>').append([
                             $('<th/>').append($('<input>', {
                                 type: 'checkbox',
-                                name: 'others'
+                                name: 'others',
+                                "data-toggle": "tooltip",
+                                "data-placement": "top",
+                                title: "其他页的全部项"
                             }).change(e => helper.refreshBatchProcessTriggers(data))),
                             $('<th/>').append($('<button/>', {
                                 type: 'button',
