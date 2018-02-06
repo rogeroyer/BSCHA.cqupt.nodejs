@@ -278,12 +278,6 @@
                 });
             });
         })
-        /*.post(/system\/close-client$/i, () => {
-            console.log('#BSCHA: Close client.');
-        })
-        .post(/system\/shutdown$/i, () => {
-            console.log('#BSCHA: Terminate system.');
-        })*/
         .listen(3530, () => {
             console.log('BSCHA listening on port 3530...');
         });
