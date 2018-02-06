@@ -214,7 +214,7 @@
             }).append([
                 $('<span/>').css({
                     textAlign: 'center'
-                }).text('Copyright © 2018 Chongqing University of Posts and Telecommunications Inc. All rights reserved.')
+                }).text('Copyright © 2018 EVGET and CQUPT. All rights reserved.')//.text('Copyright © 2018 Chongqing University of Posts and Telecommunications Inc. All rights reserved.')
             ])
         });
 
@@ -350,7 +350,7 @@
                                 "data-toggle": "tooltip",
                                 "data-placement": "top",
                                 title: "其他页的全部项"
-                            }).change(e => helper.refreshBatchProcessTriggers(data))),
+                            }).tooltip().change(e => helper.refreshBatchProcessTriggers(data))),
                             $('<th/>').append($('<button/>', {
                                 type: 'button',
                                 class: 'btn btn-primary btn-sm'
@@ -422,9 +422,13 @@
                                         }
                                     });
                                 });*/
-                                if (field.format) $(th).css({
+                                if (field.format) $(th).append($('<span/>', {
+                                    "data-toggle": "tooltip",
+                                    "data-placement": "top",
+                                    title: field.format_tip
+                                }).css({
                                     color: 'grey'
-                                }).text('格式：' + field.format);
+                                }).tooltip().text('/^ ' + field.format + ' $/'));
                                 else if (field.special) $(th).append($('<button/>', {
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm batch-process'
@@ -486,16 +490,24 @@
                             }))
                         ]),
                         $('<tr/>').append([
-                            $('<th/>').append($('<a/>').css({
+                            $('<th/>').append($('<a/>', {
+                                "data-toggle": "tooltip",
+                                "data-placement": "top",
+                                title: "全选"
+                            }).css({
                                 cursor: 'pointer'
-                            }).text('全').click(e => {
+                            }).tooltip().text('A').click(e => {
                                 $('input:checkbox').prop({
                                     checked: true
                                 });
                                 helper.refreshBatchProcessTriggers(data);
-                            })).append('/').append($('<a/>').css({
+                            })).append('/').append($('<a/>', {
+                                "data-toggle": "tooltip",
+                                "data-placement": "top",
+                                title: "反选"
+                            }).css({
                                 cursor: 'pointer'
-                            }).text('反').click(e => {
+                            }).tooltip().text('O').click(e => {
                                 for (let cb of Array.from($(':checkbox'))) {
                                     $(cb).prop({
                                         checked: !$(cb).prop('checked')

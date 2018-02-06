@@ -32,8 +32,8 @@
             table: {
                 head: [
                     {key: 'species', output: 'refer', input: 'refer', refer: {route: ['species'], key: 'name'}, order: true},
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '非空。'},
-                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '多行，每行2个数字。'},
+                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '.+', format_tip: '非空'},
+                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '(\\d+\\s+\\d+|\\n)+', format_tip: '多行，每行两个数字'},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
@@ -45,8 +45,8 @@
             table: {
                 special: 'classify',
                 head: [
-                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '非空。'},
-                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '多行，每行2个数字。'},
+                    {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '.+', format_tip: '非空'},
+                    {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '(\\d+\\s+\\d+|\\n)+', format_tip: '多行，每行两个数字'},
                     {key: 'classification', output: String.name, default: '未知', special: {name: '分类', post: 'classify'}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
@@ -267,14 +267,16 @@
             let ns = nd.session();
             ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
                 ns.close();
-                fs.writeFile('download_cache\\download.data', records.map(record => record._fields.join('\t')).join('\n'), (err) => {
-                    res.send(JSON.stringify(err ? {
-                        success: false,
-                        message: err.toString()
-                    } : {
-                        success: true,
-                        file: 'download_cache/download.data'
-                    }));
+                fs.mkdir('download_cache', 0o777, () => {
+                    fs.writeFile('download_cache\\download.data', records.map(record => record._fields.join('\t')).join('\r\n'), (err) => {
+                        res.send(JSON.stringify(err ? {
+                            success: false,
+                            message: err.toString()
+                        } : {
+                            success: true,
+                            file: 'download_cache/download.data'
+                        }));
+                    });
                 });
             });
         })
