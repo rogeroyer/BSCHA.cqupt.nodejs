@@ -268,13 +268,13 @@
             ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
                 ns.close();
                 fs.mkdir('download_cache', 0o777, () => {
-                    fs.writeFile('download_cache\\download.data', records.map(record => record._fields.join('\t')).join('\r\n'), (err) => {
+                    fs.writeFile('download_cache\\分类.txt', records.map(record => record._fields.join('\t')).join('\r\n'), (err) => {
                         res.send(JSON.stringify(err ? {
                             success: false,
                             message: err.toString()
                         } : {
                             success: true,
-                            file: 'download_cache/download.data'
+                            file: 'download_cache/分类.txt'
                         }));
                     });
                 });

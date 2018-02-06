@@ -10,7 +10,6 @@
     ]).then(([database, server]) => {
         if (database && server) {
             console.log('服务正在运行');
-            child_process.spawn('chrome.exe', ['http://localhost:3530']);
         } else Promise.all([
             promise(resolve => {
                 console.log("启动数据库……");
@@ -33,11 +32,7 @@
                 });
             })
         ]).then(() => {
-            child_process.spawn('chrome.exe', ['http://localhost:3530']).on('close', (code) => {
-                child_process.exec('taskkill /f /t /im node.exe');
-                child_process.exec('taskkill /f /t /im java.exe');
-            });
-            console.log("欢迎使用血液分类系统，请不要关闭本窗口。");
+            console.log("服务已启动，欢迎使用血液分类系统，请在浏览器打开：http://localhost:3530。");
         });
     });
 

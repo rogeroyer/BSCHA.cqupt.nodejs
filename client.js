@@ -214,7 +214,7 @@
             }).append([
                 $('<span/>').css({
                     textAlign: 'center'
-                }).text('Copyright © 2018 EVGET and CQUPT. All rights reserved.')//.text('Copyright © 2018 Chongqing University of Posts and Telecommunications Inc. All rights reserved.')
+                }).text('Copyright © 2018 EVGET. All rights reserved.')//.text('Copyright © 2018 Chongqing University of Posts and Telecommunications Inc. All rights reserved.')
             ])
         });
 
@@ -332,7 +332,7 @@
                             }, sent => {
                                 $('#requesting_mask').hide();
                                 sent = JSON.parse(sent);
-                                if (sent.success) location.assign('http://localhost:3530/' + sent.file);
+                                if (sent.success) window.open('http://localhost:3530/' + sent.file);
                                 else alert(sent.message)
                             });
                         });
