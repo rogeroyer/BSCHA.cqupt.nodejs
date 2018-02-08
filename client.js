@@ -190,10 +190,7 @@
                     $('<a/>', {
                         class: 'nav-item nav-link' + (state.route[0] === 'applying' ? ' active' : ''),
                         href: '?' + JSON.stringify({route: ['applying']})
-                    }).text('测试集'),
-                    /*$('<a/>', {
-                        class: 'nav-item nav-link'
-                    }).text('更新系统')*/
+                    }).text('测试集')
                     /*$('<a/>', {
                         class: 'nav-item nav-link'
                     }).css({
@@ -266,6 +263,23 @@
         let helper = {
             refreshBatchProcessTriggers: (data) => {
                 $('.batch-process').prop('disabled', !($('tbody').find(':checkbox:checked').length || ($(':checkbox[name=others]').prop('checked') && data.table.count > state.limit)))
+            },
+            withChecked: (callback) => {
+                let checkboxes = Array.from($('tbody').find('input:checkbox')),
+                    checked_identities = checkboxes.filter(checkbox => $(checkbox).prop('checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
+                promise(resolve => {
+                    if ($(':checkbox[name=others]').prop('checked')) {
+                        $('#requesting_mask').show();
+                        $.post('query/other_identities', {
+                            route: state.route,
+                            identities: checkboxes.map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()))
+                        }, other_identities => {
+                            $('#requesting_mask').hide();
+                            other_identities = JSON.parse(other_identities);
+                            resolve([...checked_identities, ...other_identities]);
+                        });
+                    } else resolve(checked_identities);
+                }).then((identities) => callback(identities));
             }
         };
 
@@ -312,32 +326,29 @@
                         borderWidth: 0,
                         backgroundColor: 'inherit'
                     }).text('下载').click(e => {
-                        $('#requesting_mask').show();
-                        let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
-                        promise(resolve => {
-                            if ($(':checkbox[name=others]').prop('checked')) {
-                                $.post('query/other_identities', {
-                                    route: state.route,
-                                    identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
-                                }, others => {
-                                    others = JSON.parse(others);
-                                    identities = [...identities, ...others];
-                                    resolve();
-                                });
-                            } else resolve();
-                        }).then(() => {
-                            $.post('download', {
-                                route: state.route,
-                                identities
-                            }, sent => {
-                                $('#requesting_mask').hide();
-                                sent = JSON.parse(sent);
-                                if (sent.success) window.open('http://localhost:3530/' + sent.file);
-                                else alert(sent.message)
-                            });
-                        });
+                        helper.withChecked(identities => $.post('download', {
+                            route: state.route,
+                            identities: JSON.stringify(identities)
+                        }, sent => {
+                            $('#requesting_mask').hide();
+                            sent = JSON.parse(sent);
+                            if (sent.success) window.open('http://localhost:3530/' + sent.file);
+                            else alert(sent.message)
+                        }));
                     }));
                 }
+                $('body').$frame('root main main navigator').children('nav:first').append($('<a/>', {
+                    class: 'nav-item nav-link'
+                }).css({
+                    cursor: 'pointer'
+                }).text('更新系统').click(e => {
+                    $('#requesting_mask').show();
+                    $.post('system/update', res => {
+                        res = JSON.parse(res);
+                        console.log(res.message);
+                        if (!res.success) $('#requesting_mask').hide();
+                    })
+                }));
                 let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
                 $('body').$frame('root main main main').html('').append([
                     $('<table/>', {
@@ -433,60 +444,36 @@
                                     type: 'button',
                                     class: 'btn btn-primary btn-sm batch-process'
                                 }).text(field.special.name).click(e => {
-                                    if (confirm('对所选的项' + field.special.name + '?')) {
-                                        $('#requesting_mask').show();
-                                        let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
-                                        promise(resolve => {
-                                            if ($(':checkbox[name=others]').prop('checked')) {
-                                                $.post('query/other_identities', {
-                                                    route: state.route,
-                                                    identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
-                                                }, others => {
-                                                    others = JSON.parse(others);
-                                                    identities = [...identities, ...others];
-                                                    resolve();
-                                                });
-                                            } else resolve();
-                                        }).then(() => {
+                                    helper.withChecked(identities => {
+                                        if (confirm('对所选的项' + field.special.name + '?')) {
+                                            $('#requesting_mask').show();
                                             $.post('special/' + field.special.post, {
                                                 route: field.route,
-                                                identities
+                                                identities: JSON.stringify(identities)
                                             }, result => {
                                                 result = JSON.parse(result);
                                                 alert(result.message);
                                                 if (result.success) setTimeout(() => location.href = location.href, 300);
                                                 else $('#requesting_mask').hide();
                                             });
-                                        });
-                                    }
+                                        }
+                                    });
                                 }));
                             })),
                             $('<th/>').append($('<button/>', {
                                 class: 'btn btn-danger btn-sm batch-process'
                             }).text('删除').click(e => {
-                                if (confirm('确定删除所选的项？')) {
-                                    $('#requesting_mask').show();
-                                    let identities = Array.from($('tbody').find('input:checkbox:checked')).map(cb => Number.parseInt($(cb).parents('tr:first').children('td:eq(1)').text()));
-                                    promise(resolve => {
-                                        if ($(':checkbox[name=others]').prop('checked')) {
-                                            $.post('query/other_identities', {
-                                                route: state.route,
-                                                identities: Array.from($('tbody').find('input:checkbox')).map(cb => $(cb).parents('tr:first').children('td:eq(1)').text())
-                                            }, others => {
-                                                others = JSON.parse(others);
-                                                identities = [...identities, ...others];
-                                                resolve();
-                                            });
-                                        } else resolve();
-                                    }).then(() => {
+                                helper.withChecked(identities => {
+                                    if (confirm('确定删除所选的项？')) {
+                                        $('#requesting_mask').show();
                                         $.post('delete', {
                                             route: state.route,
-                                            identities
+                                            identities: JSON.stringify(identities)
                                         }, () => {
                                             location.href = location.href;
                                         });
-                                    });
-                                }
+                                    }
+                                });
                             }))
                         ]),
                         $('<tr/>').append([
@@ -645,9 +632,8 @@
                                             $('#requesting_mask').show();
                                             $.post('delete', {
                                                 route: state.route,
-                                                identities: [$(e.target).parents('tr:first').children('td:eq(1)').text()]
+                                                identities: JSON.stringify([Number.parseInt($(e.target).parents('tr:first').children('td:eq(1)').text())])
                                             }, () => {
-                                                $('#requesting_mask').hide();
                                                 location.href = location.href;
                                             });
                                         }

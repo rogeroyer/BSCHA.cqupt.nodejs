@@ -24,6 +24,7 @@
     "neo4j-driver": "^1.5.3",
     "openurl": "^1.1.1",
     "popper.js": "^1.13.0",
-    "reset-css": "^2.2.1"
+    "reset-css": "^2.2.1",
+    "xlsx": "^0.11.19"
   }
 }

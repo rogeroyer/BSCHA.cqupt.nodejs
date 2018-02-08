@@ -5,7 +5,8 @@
         bodyParser = require('body-parser'),
         neo4j = require('neo4j-driver').v1,
         child_process = require('child_process'),
-        fs = require('fs');
+        fs = require('fs'),
+        XLSX = require('xlsx');
     require('./extend');
 
     let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
@@ -62,30 +63,35 @@
         [false]: '动物'
     };
 
+    const dictionary = {
+        species: '物种',
+        training: '训练集',
+        applying: '测试集',
+        name: '名称',
+        description: '描述',
+        data: '数据',
+        classification: '分类',
+        create_dt: '创建时间',
+        update_dt: '修改时间'
+    };
+
     express()
         .use(express.static('.'))
-        .use(bodyParser.json())
+        .use(bodyParser.json({
+            limit: '50mb'
+        }))
         .use(bodyParser.urlencoded({
+            limit: '50mb',
             extended: true
         }))
         .get(/^.*$/, (req, res) => {
             res.send(require('fs').readFileSync('client.html', 'utf8'));
         })
         .post(/query\/dictionary$/i, (req, res) => {
-            res.send(JSON.stringify({
-                species: '物种',
-                training: '训练集',
-                applying: '测试集',
-                name: '名称',
-                description: '描述',
-                data: '数据',
-                classification: '分类',
-                create_dt: '创建时间',
-                update_dt: '修改时间'
-            }));
+            res.send(JSON.stringify(dictionary));
         })
         .post(/query\/other_identities$/, (req, res) => {
-            let {route = [], identities = []} = req.body;
+            let {route = [], identities} = req.body;
             let ns = nd.session();
             ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where not (id(n) in [${identities.join(',')}]) return id(n)`).then(({records}) => {
                 ns.close();
@@ -152,28 +158,24 @@
             }
         })
         .post(/delete$/i, (req, res) => {
-            let {route, identities = []} = req.body,
+            let {route, identities} = req.body,
                 data = route.reduce((a, b) => a[b], router);
-            if (identities.length) {
-                let ns = nd.session(),
-                    t = 0;
-                for (let id of identities) {
-                    let mission = () => ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n)=${id} delete r,n`).then(() => {
-                        if (++t == identities.length) {
-                            ns.close();
-                            res.send(null);
-                        }
-                    });
-                    if (data.table.referred && data.table.referred.length) {
-                        let u = 0;
-                        for (let service of data.table.referred) {
-                            ns.run(`match (:root{name:'BSCHA'})${service.route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where n.${service.key}='${id}' delete r,n`).then(() => {
-                                if (++u == data.table.referred.length) mission();
-                            });
-                        }
-                    } else mission();
-                }
-            }
+            identities = JSON.parse(identities);
+            let ns = nd.session();
+            promise(resolve => {
+                if (data.table.referred && data.table.referred.length) {
+                    Promise.all(data.table.referred.map(service => promise(resolve => ns.run(
+                        `match (:root{name:'BSCHA'})${service.route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where n.${service.key}='${id}' delete r,n`
+                    ).then(() => resolve())))).then(() => resolve());
+                } else resolve();
+            }).then(() => {
+                ns.run(
+                    `match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[r:implement]->(n) where id(n) in ${JSON.stringify(identities)} delete r,n`
+                ).then(() => {
+                    ns.close();
+                    res.send(null);
+                })
+            });
         })
         .post(/modify\/pattern$/i, (req, res) => {
             let {identity, key, value} = req.body,
@@ -219,6 +221,7 @@
         })
         .post(/special\/classify$/i, (req, res) => {
             let {identities} = req.body;
+            identities = JSON.parse(identities);
             identities.forEach((identity, i) => identities[i] = Number.parseInt(identity));
             child_process.exec(`python classify.py "${JSON.stringify(identities)}"`, (error, stdout, stderr) => {
                 if (error) {
@@ -263,22 +266,53 @@
             });
         })
         .post(/download$/i, (req, res) => {
-            let {route, identities = []} = req.body,
+            let {route, identities} = req.body,
                 data = route.reduce((a, b) => a[b], router);
+            identities = JSON.parse(identities);
             let ns = nd.session();
             ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
                 ns.close();
                 fs.mkdir('download_cache', 0o777, () => {
-                    fs.writeFile('download_cache\\分类.txt', records.map(record => record._fields.join('\t')).join('\r\n'), (err) => {
-                        res.send(JSON.stringify(err ? {
-                            success: false,
-                            message: err.toString()
-                        } : {
+                    try {
+                        XLSX.writeFile({
+                            SheetNames: ['default'],
+                            Sheets: {
+                                default: XLSX.utils.json_to_sheet(records.map(record => record._fields.reduce((o, v, i) => Object.assign(o, {
+                                    [dictionary[data.table.download[i]]]: v
+                                }), {})), {
+                                    header: data.table.download.map(key => dictionary[key])
+                                })
+                            }
+                        }, 'download_cache\\分类.xlsx');
+                        res.send(JSON.stringify({
                             success: true,
-                            file: 'download_cache/分类.txt'
+                            file: 'download_cache/分类.xlsx'
                         }));
-                    });
+                    } catch (e) {
+                        res.send(JSON.stringify({
+                            success: false,
+                            message: e.toString()
+                        }));
+                    }
                 });
+            });
+        })
+        .post(/system\/update$/i, (req, res) => {
+            child_process.exec("git pull", (error, stdout, stderr) => {
+                if (error) {
+                    res.send(JSON.stringify({
+                        success: false,
+                        message: error.toString()
+                    }));
+                } else if (stderr.length) {
+                    res.send(JSON.stringify({
+                        success: false,
+                        message: stderr.toString()
+                    }));
+                } else res.send(JSON.stringify({
+                    success: true,
+                    message: '系统已更新，请重启服务和页面。'
+                }))
             });
         })
         .listen(3530, () => {
