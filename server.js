@@ -123,6 +123,13 @@
         .post(/create$/i, (req, res) => {
             let {route, properties} = req.body,
                 data = route.reduce((a, b) => a[b], router);
+            let head = data.table.head.reduce((head, seg) => Object.assign(head, {
+                [seg.key]: seg
+            }), {});
+            Object.keys(properties).forEach(key => {
+                if (head[key] && head[key].refer) properties[key] = Number.parseInt(properties[key]);
+            });
+            console.log(properties);
             if (data.table) {
                 let ns = nd.session(),
                     checks = [], errors = [], t = 0,
@@ -192,28 +199,32 @@
             });
         })
         .post(/modify$/i, (req, res) => {
-            let {route} = req.body,
+            let {route, identity, key, value} = req.body,
                 data = route.reduce((a, b) => a[b], router);
+            let head = data.table.head.reduce((head, seg) => Object.assign(head, {
+                [seg.key]: seg
+            }), {});
+            if (head[key].refer) value = Number.parseInt(value);
             if (data.table) {
                 let ns = nd.session(),
-                    rule = data.table.head.find((rule) => rule.key === req.body.key),
+                    rule = data.table.head.find((rule) => rule.key === key),
                     mission = () => {
-                        ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n)=${req.body.identity} set n.${req.body.key}=${JSON.stringify(req.body.value)},n.update_dt=${Math.floor(Date.now() / 1000)}`).then(() => {
+                        ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n)=${identity} set n.${key}=${JSON.stringify(value)},n.update_dt=${Math.floor(Date.now() / 1000)}`).then(() => {
                             ns.close();
                             res.send(JSON.stringify({
                                 success: true
                             }));
                         });
                     };
-                if (rule.primary) ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where n.${req.body.key}='${req.body.value}' return n`).then(({records}) => {
+                if (rule.primary) ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where n.${key}='${value}' return n`).then(({records}) => {
                     if (records.length) {
                         ns.close();
-                        if (records[0]._fields[0].identity.low == req.body.identity) res.send(JSON.stringify({
+                        if (records[0]._fields[0].identity.low == identity) res.send(JSON.stringify({
                             success: true
                         }));
                         else res.send(JSON.stringify({
                             success: false,
-                            message: `创建失败：${req.body.key} 为 ${req.body.value} 的记录已存在`
+                            message: `创建失败：${key} 为 ${value} 的记录已存在`
                         }));
                     } else mission();
                 });
@@ -299,30 +310,28 @@
             });
         })
         .post(/system\/update$/i, (req, res) => {
-            child_process.exec('git commit package.json package-lock.json -m asdf',()=>{
-                child_process.exec('git push',()=>{
-                    child_process.exec("git pull", (error, stdout, stderr) => {
-                        if (error) {
-                            res.send(JSON.stringify({
-                                success: false,
-                                message: 'A'+error.toString()
-                            }));
-                        } else if (stderr.length) {
-                            res.send(JSON.stringify({
-                                success: true,
-                                message: '系统已更新，请重新启动服务和界面。'
-                            }));
-                        } else {
-                            if (/.*Already\sup\sto\sdate\..*/i) res.send(JSON.stringify({
-                                success: false,
-                                message: '系统已经是最新版本。'
-                            }));
-                            else res.send(JSON.stringify({
-                                success: true,
-                                message: '系统已更新，请重新启动服务和界面。'
-                            }));
-                        }
-                    });
+            child_process.exec('git checkout -- .', () => {
+                child_process.exec("git pull", (error, stdout, stderr) => {
+                    if (error) {
+                        res.send(JSON.stringify({
+                            success: false,
+                            message: 'A' + error.toString()
+                        }));
+                    } else if (stderr.length) {
+                        res.send(JSON.stringify({
+                            success: true,
+                            message: '系统已更新，请重新启动服务和界面。'
+                        }));
+                    } else {
+                        if (/.*Already\sup\sto\sdate\..*/i) res.send(JSON.stringify({
+                            success: false,
+                            message: '系统已经是最新版本。'
+                        }));
+                        else res.send(JSON.stringify({
+                            success: true,
+                            message: '系统已更新，请重新启动服务和界面。'
+                        }));
+                    }
                 });
             });
         })

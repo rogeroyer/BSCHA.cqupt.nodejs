@@ -226,7 +226,7 @@
                             class: 'form-control'
                         }).append(JSON.parse(data).table.records.map(record => $('<option/>', {
                             value: record.identity.low
-                        }).text(record.properties[field.refer.key]))).val(value);
+                        }).text(record.properties[field.refer.key]))).val(value.low);
                         this.append($select);
                         callback($select[0]);
                     });
@@ -563,7 +563,7 @@
                                                 text = value.replace(/\n/g, '<br/>');
                                                 break;
                                             case 'refer':
-                                                text = refers[field.key][value] ? refers[field.key][value].properties[field.refer.key] : '';
+                                                text = refers[field.key][value.low] ? refers[field.key][value.low].properties[field.refer.key] : '';
                                                 break;
                                             default:
                                                 text = '';
