@@ -71,7 +71,7 @@
         description: '描述',
         data: '数据',
         classification_probability: '分类概率',
-        classification: '分类归一',
+        classification: '分类',
         create_dt: '创建时间',
         update_dt: '修改时间'
     };
