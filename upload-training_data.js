@@ -123,7 +123,7 @@
                             let dt = Math.floor(Date.now() / 1000);
                             Promise.all(species.samples.map(sample => promise(resolve => {
                                 ns.run(
-                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:${species.id},name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
+                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:'${species.id}',name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
                                 ).then(() => resolve());
                             }))).then(() => resolve());
                         }))).then(() => resolve(tree));
