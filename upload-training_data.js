@@ -16,8 +16,7 @@
             let package_dir = (ls => ls[ls.length - 1])(package_path.trim().split(/[\/\\]/));
             if (fs.statSync(package_path).isDirectory()) {
                 let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
-                    ns = nd.session(),
-                    count = 0;
+                    ns = nd.session();
                 promise(resolve => Promise.all([
                     promise(resolve => ns.run(
                         `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'species'}) return n.patterns`
@@ -65,12 +64,8 @@
                             ns.run(
                                 `match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance{name:'${name}'}) return id(n)`
                             ).then(({records}) => {
-                                if (records[0]) resolve(Object.assign(species, {id: records[0]._fields[0].low}));
+                                if (records[0]) resolve(Object.assign(species, {name: name, id: records[0]._fields[0].low}));
                                 else {
-                                    let rl = readline.createInterface({
-                                        input: process.stdin,
-                                        output: process.stdout
-                                    });
                                     /*let choose = () => rl.question(`物种 ${name} 不存在！请输入[1:修改物种名称，2:创建该物种]：`, answer => {
                                         switch (answer) {
                                             case '1':
@@ -97,18 +92,26 @@
                                                 choose();
                                         }
                                     });*/
-                                    let choose = () => rl.question(`物种 ${name} 不存在！请选择[1:人类，2:动物]：`, answer => {
-                                        rl.close();
-                                        switch (answer) {
-                                            case '1':
-                                            case '2':
-                                                check({'1': '人类', '2': '动物'}[answer]);
-                                                break;
-                                            default:
-                                                console.warn('错误的输入！');
-                                                choose();
-                                        }
-                                    });
+                                    let choose = () => {
+                                        let rl = readline.createInterface({
+                                            input: process.stdin,
+                                            output: process.stdout
+                                        });
+                                        rl.question(`物种 ${name} 不存在！请选择[1:人类，2:动物]：`, answer => {
+                                            rl.close();
+                                            switch (answer) {
+                                                case '1':
+                                                    check('人类');
+                                                    break;
+                                                case '2':
+                                                    check('动物');
+                                                    break;
+                                                default:
+                                                    console.warn('错误的输入！');
+                                                    choose();
+                                            }
+                                        });
+                                    };
                                     choose();
                                 }
                             })
@@ -119,15 +122,14 @@
                         Promise.all(tree.map(species => promise(resolve => {
                             let dt = Math.floor(Date.now() / 1000);
                             Promise.all(species.samples.map(sample => promise(resolve => {
-                                count++;
                                 ns.run(
-                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:'${species.id}',name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
+                                    `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'training'}) create (n)-[:implement]->(:instance{species:${species.id},name:'${sample.name}',data:'${sample.data}',create_dt:${dt},update_dt:${dt}})`
                                 ).then(() => resolve());
                             }))).then(() => resolve());
-                        }))).then(() => resolve());
+                        }))).then(() => resolve(tree));
                     });
-                })).then(() => {
-                    console.log(`录入完毕，共录入${count}个样本。`);
+                })).then((tree) => {
+                    console.log(`录入完毕，共录入:${tree.map(species => `${species.samples.length}个“${species.name}”样本`).join('、')}。`);
                     ns.close();
                     nd.close();
                     return resolve();
