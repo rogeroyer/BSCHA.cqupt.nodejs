@@ -11,6 +11,7 @@
         if (database && server) {
             console.log('服务正在运行');
         } else Promise.all([
+            promise(resolve => child_process.exec('npm update', resolve)),
             promise(resolve => {
                 console.log("启动数据库……");
                 child_process.spawn('neo4j-community-3.3.2\\bin\\neo4j.bat', ['console']).stdout.on('data', data => {

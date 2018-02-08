@@ -326,15 +326,18 @@
                         borderWidth: 0,
                         backgroundColor: 'inherit'
                     }).text('下载').click(e => {
-                        helper.withChecked(identities => $.post('download', {
-                            route: state.route,
-                            identities: JSON.stringify(identities)
-                        }, sent => {
-                            $('#requesting_mask').hide();
-                            sent = JSON.parse(sent);
-                            if (sent.success) window.open('http://localhost:3530/' + sent.file);
-                            else alert(sent.message)
-                        }));
+                        helper.withChecked(identities =>{
+                            $('#requesting_mask').show();
+                            $.post('download', {
+                                route: state.route,
+                                identities: JSON.stringify(identities)
+                            }, sent => {
+                                $('#requesting_mask').hide();
+                                sent = JSON.parse(sent);
+                                if (sent.success) window.open('http://localhost:3530/' + sent.file);
+                                else alert(sent.message)
+                            })
+                        });
                     }));
                 }
                 $('body').$frame('root main main navigator').children('nav:first').append($('<a/>', {
