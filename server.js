@@ -265,36 +265,34 @@
             });
         })
         .post(/download$/i, (req, res) => {
-            child_process.exec('npm install xlsx',()=>{
-                let {route, identities} = req.body,
-                    data = route.reduce((a, b) => a[b], router);
-                identities = JSON.parse(identities);
-                let ns = nd.session();
-                ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
-                    ns.close();
-                    fs.mkdir('download_cache', 0o777, () => {
-                        try {
-                            XLSX.writeFile({
-                                SheetNames: ['default'],
-                                Sheets: {
-                                    default: XLSX.utils.json_to_sheet(records.map(record => record._fields.reduce((o, v, i) => Object.assign(o, {
-                                        [dictionary[data.table.download[i]]]: v
-                                    }), {})), {
-                                        header: data.table.download.map(key => dictionary[key])
-                                    })
-                                }
-                            }, 'download_cache\\分类.xlsx');
-                            res.send(JSON.stringify({
-                                success: true,
-                                file: 'download_cache/分类.xlsx'
-                            }));
-                        } catch (e) {
-                            res.send(JSON.stringify({
-                                success: false,
-                                message: e.toString()
-                            }));
-                        }
-                    });
+            let {route, identities} = req.body,
+                data = route.reduce((a, b) => a[b], router);
+            identities = JSON.parse(identities);
+            let ns = nd.session();
+            ns.run(`match (:root{name:'BSCHA'})${route.map(service => `-[:specialize]->(:class{name:'${service}'})`).join('')}-[:implement]->(n) where id(n) in [${identities.join(',')}] return ${data.table.download.map(key => 'n.' + key).join(',')}`).then(({records}) => {
+                ns.close();
+                fs.mkdir('download_cache', 0o777, () => {
+                    try {
+                        XLSX.writeFile({
+                            SheetNames: ['default'],
+                            Sheets: {
+                                default: XLSX.utils.json_to_sheet(records.map(record => record._fields.reduce((o, v, i) => Object.assign(o, {
+                                    [dictionary[data.table.download[i]]]: v
+                                }), {})), {
+                                    header: data.table.download.map(key => dictionary[key])
+                                })
+                            }
+                        }, 'download_cache\\分类.xlsx');
+                        res.send(JSON.stringify({
+                            success: true,
+                            file: 'download_cache/分类.xlsx'
+                        }));
+                    } catch (e) {
+                        res.send(JSON.stringify({
+                            success: false,
+                            message: e.toString()
+                        }));
+                    }
                 });
             });
         })
