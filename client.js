@@ -326,7 +326,7 @@
                         borderWidth: 0,
                         backgroundColor: 'inherit'
                     }).text('下载').click(e => {
-                        helper.withChecked(identities =>{
+                        helper.withChecked(identities => {
                             $('#requesting_mask').show();
                             $.post('download', {
                                 route: state.route,
@@ -334,7 +334,7 @@
                             }, sent => {
                                 $('#requesting_mask').hide();
                                 sent = JSON.parse(sent);
-                                if (sent.success) window.open('http://localhost:3530/' + sent.file);
+                                if (sent.success) location.assign('http://localhost:3530/' + sent.file);
                                 else alert(sent.message)
                             })
                         });
