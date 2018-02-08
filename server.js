@@ -303,12 +303,12 @@
                 if (error) {
                     res.send(JSON.stringify({
                         success: false,
-                        message: error.toString()
+                        message: 'A'+error.toString()
                     }));
                 } else if (stderr.length) {
                     res.send(JSON.stringify({
-                        success: false,
-                        message: stderr.toString()
+                        success: true,
+                        message: '系统已更新，请重新启动服务和界面。'
                     }));
                 } else {
                     if (/.*Already\sup\sto\sdate\..*/i) res.send(JSON.stringify({
