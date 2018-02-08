@@ -35,7 +35,7 @@ def creat_train_set():
             human_id = None
             labels = []
             ALL_feature = []
-            for record in tx.run("match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance) where n.name='human' return id(n)"):
+            for record in tx.run("match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'species'})-[:implement]->(n:instance) where n.name='人类' return id(n)"):
                 human_id = int(record[0])
             for record in tx.run("match (:root{name:'BSCHA'})-[:specialize]->(:class{name:'training'})-[:implement]->(n:instance) return n.species,n.data"):
 #                print(record)
@@ -166,7 +166,7 @@ def model_G(train_data,label,test_data,test_remain_file_name):
     anss = pd.DataFrame()
     anss['file'] = test_remain_file_name
     anss['pro'] = predict
-    anss['label'] = anss['pro'].map(lambda x:True if x>0.75 else False)
+    anss['label'] = anss['pro'].map(lambda x:True if x>0.8 else False)
 #    anss.to_csv('read_test.csv',index=None)
     return anss
     
