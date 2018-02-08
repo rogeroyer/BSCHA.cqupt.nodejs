@@ -224,7 +224,7 @@
                         let $select = $('<select/>', {
                             name: field.key,
                             class: 'form-control'
-                        }).width('auto').append(JSON.parse(data).table.records.map(record => $('<option/>', {
+                        }).append(JSON.parse(data).table.records.map(record => $('<option/>', {
                             value: record.identity.low
                         }).text(record.properties[field.refer.key]))).val(value);
                         this.append($select);

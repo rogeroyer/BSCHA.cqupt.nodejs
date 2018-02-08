@@ -9,8 +9,7 @@
         XLSX = require('xlsx');
     require('./extend');
 
-    let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha')),
-        path = (l => l.slice(0, l.length - 1).join('\\'))(require('path').dirname(require.main.filename).split(/[\\\/]/));
+    let nd = neo4j.driver('bolt://localhost', neo4j.auth.basic('bscha', 'bscha'));
 
     const router = {
         services: ['species', 'training', 'applying'],
