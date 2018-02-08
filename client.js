@@ -557,7 +557,7 @@
                                                 text = new Date(value.low * 1000).toJSON().replace(/^[^\d]*(\d+)\-(\d+)\-(\d+)[^\d]*(\d+)\:(\d+)\:(\d+).*$/, '$1-$2-$3 $4:$5:$6');
                                                 break;
                                             case Number.name:
-                                                text = (value && value.low) || 'NaN';
+                                                text = (value && (value.low || value)) || 'NaN';
                                                 break;
                                             case String.name:
                                                 text = value.replace(/\n/g, '<br/>');

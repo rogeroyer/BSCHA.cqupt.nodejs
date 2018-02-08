@@ -188,11 +188,15 @@ if __name__ == '__main__':
     
     name_list = list(ans.file)
     label_list = list(ans.label)
+    ratio_list = list(ans.pro)
     ans_dict = dict(zip(name_list,label_list))
-    
+    ratio_dict = dict(zip(name_list,ratio_list))
     json_ans = []
     for parms_order in test_list.strip('\"[').strip(']\"').split(','):
-        json_ans.append(not not ans_dict.get(parms_order,False))
+        tmp_dict = {}
+        tmp_dict["normalized"] = not not ans_dict.get(parms_order,False)
+        tmp_dict["probability"] = ratio_dict.get(parms_order,0)
+        json_ans.append(tmp_dict)
         
     
     return_json = {}
