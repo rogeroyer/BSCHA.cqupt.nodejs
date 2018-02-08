@@ -340,18 +340,6 @@
                         });
                     }));
                 }
-                $('body').$frame('root main main navigator').children('nav:first').append($('<a/>', {
-                    class: 'nav-item nav-link'
-                }).css({
-                    cursor: 'pointer'
-                }).text('更新系统').click(e => {
-                    $('#requesting_mask').show();
-                    $.post('system/update', res => {
-                        res = JSON.parse(res);
-                        alert(res.message);
-                        if (!res.success) $('#requesting_mask').hide();
-                    })
-                }));
                 let patterns = JSON.parse(data.table.service.properties.patterns.replace(/\\/g, '\\\\'));
                 $('body').$frame('root main main main').html('').append([
                     $('<table/>', {
@@ -709,6 +697,18 @@
                 ]);
                 helper.refreshBatchProcessTriggers(data);
             }
+            $('body').$frame('root main main navigator').children('nav:first').append($('<a/>', {
+                class: 'nav-item nav-link'
+            }).css({
+                cursor: 'pointer'
+            }).text('更新系统').click(e => {
+                $('#requesting_mask').show();
+                $.post('system/update', res => {
+                    res = JSON.parse(res);
+                    alert(res.message);
+                    if (!res.success) $('#requesting_mask').hide();
+                })
+            }));
         });
     });
 })();
