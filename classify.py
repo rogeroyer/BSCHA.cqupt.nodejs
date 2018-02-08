@@ -59,13 +59,18 @@ def creat_train_set():
             if all_data.shape[0]==0:
                 raise 'No Train Data'
             if ((sum(labels) == len(labels)) | (sum(labels) == 0)):
-                raise '目前数据库只有一个物种，请上传多个物种！'
+                
+                return_json = {}
+                return_json["success"]=False
+                return_json["message"]="分类失败：目前数据库只有一个物种，请上传多个物种！"
+                print(json.dumps(return_json))
+                return -1
             all_data = pd.concat([pd.DataFrame(labels),all_data],axis=1,ignore_index=True)
             all_data = all_data.fillna(all_data.mean())
     
             all_data = all_data.values
             train_data,label = all_data[:,1:],all_data[:,0]
-            return train_data,label,all_data
+            return [train_data,label,all_data]
         
 #%%
 def confuse_matrix(pred,real):
@@ -173,36 +178,34 @@ def model_G(train_data,label,test_data,test_remain_file_name):
 if __name__ == '__main__':
         
     
-    train_data,label,all_data = creat_train_set()
-    test_list = sys.argv[1]
-#    test_list =  "[1022,1021,1020,1019,1018,1017,1016,1015,1014,1013,1012\
-#    ,1011,1010,998,997,996,995,994,993,992,991,990,989,988,987,986,985,984,983,982,981,980,979,978,977,976,975,974,973,972,971\
-#    ,970,969,968,967,966,965,964,963,962,961,960,959,958,843,842,841,723,722,721,720,719,718,717,716,715,714,713,712,711,710\
-#    ,709,708,707,706,705,704,703,702,701,700,699,698,697,696,695,694,693,692,691,690,689,688,687,686,685,684,683,682,681,680\
-#    ,679,678,677]"
-#    key = "match (n) where id(n) in "+str(test_list)+" return n.id,n.data"
-#    key = "match (n) where id(n) in [2080,2081] return n.id,n.data"
-    test_data,file_name,continue_list = creat_test_set(test_list)
-    ans = model_G(train_data,label,test_data,file_name)
-    
-    name_list = list(ans.file)
-    label_list = list(ans.label)
-    ratio_list = list(ans.pro)
-    ans_dict = dict(zip(name_list,label_list))
-    ratio_dict = dict(zip(name_list,ratio_list))
-    json_ans = []
-    for parms_order in test_list.strip('\"[').strip(']\"').split(','):
-        tmp_dict = {}
-        tmp_dict["normalized"] = not not ans_dict.get(parms_order,False)
-        tmp_dict["probability"] = ratio_dict.get(parms_order,0)
-        json_ans.append(tmp_dict)
+    rtn = creat_train_set()
+    if type(rtn) == type([]):
+        train_data,label,all_data = rtn[0],rtn[1],rtn[2]
+        test_list = sys.argv[1]
+#        test_list =  "[3795]"
+    #    key = "match (n) where id(n) in "+str(test_list)+" return n.id,n.data"
+    #    key = "match (n) where id(n) in [2080,2081] return n.id,n.data"
+        test_data,file_name,continue_list = creat_test_set(test_list)
+        ans = model_G(train_data,label,test_data,file_name)
         
-    
-    return_json = {}
-    return_json["success"]=True
-    return_json["message"]="分类完成"
-    return_json["result"]=json_ans
-    return_json = json.dumps(return_json)
-    print(return_json)
+        name_list = list(ans.file)
+        label_list = list(ans.label)
+        ratio_list = list(ans.pro)
+        ans_dict = dict(zip(name_list,label_list))
+        ratio_dict = dict(zip(name_list,ratio_list))
+        json_ans = []
+        for parms_order in test_list.strip('\"[').strip(']\"').split(','):
+            tmp_dict = {}
+            tmp_dict["normalized"] = not not ans_dict.get(parms_order,False)
+            tmp_dict["probability"] = ratio_dict.get(parms_order,0)
+            json_ans.append(tmp_dict)
+            
+        
+        return_json = {}
+        return_json["success"]=True
+        return_json["message"]="分类成功"
+        return_json["result"]=json_ans
+        return_json = json.dumps(return_json)
+        print(return_json)
     
     
