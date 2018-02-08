@@ -345,7 +345,7 @@
                     $('#requesting_mask').show();
                     $.post('system/update', res => {
                         res = JSON.parse(res);
-                        console.log(res.message);
+                        alert(res.message);
                         if (!res.success) $('#requesting_mask').hide();
                     })
                 }));

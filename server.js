@@ -309,10 +309,16 @@
                         success: false,
                         message: stderr.toString()
                     }));
-                } else res.send(JSON.stringify({
-                    success: true,
-                    message: '系统已更新，请重启服务和页面。'
-                }))
+                } else {
+                    if (/.*Already\sup\sto\sdate\..*/i) res.send(JSON.stringify({
+                        success: false,
+                        message: '系统已经是最新版本。'
+                    }));
+                    else res.send(JSON.stringify({
+                        success: true,
+                        message: '系统已更新，请重新启动服务和界面。'
+                    }));
+                }
             });
         })
         .listen(3530, () => {
