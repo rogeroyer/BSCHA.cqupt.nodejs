@@ -49,7 +49,7 @@
                         Promise.all(tree.map(sample => promise(resolve => {
                             count++;
                             ns.run(
-                                `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'applying'}) create (n)-[:implement]->(:instance{name:'${sample.name}',data:'${sample.data}',classification:'未知',create_dt:${dt},update_dt:${dt}})`
+                                `match (:root{name:'BSCHA'})-[:specialize]->(n:class{name:'applying'}) create (n)-[:implement]->(:instance{name:'${sample.name}',data:'${sample.data}',classification_probability:null,classification:'未知',create_dt:${dt},update_dt:${dt}})`
                             ).then(() => resolve());
                         }))).then(() => resolve());
                     });

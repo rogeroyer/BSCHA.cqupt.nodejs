@@ -47,12 +47,13 @@
                 head: [
                     {key: 'name', output: String.name, input: ['input', {type: 'text'}], order: true, format: '.+', format_tip: '非空'},
                     {key: 'data', output: [String.name, {long: true}], input: 'textarea', format: '(\\d+\\s+\\d+|\\n)+', format_tip: '多行，每行两个数字'},
-                    {key: 'classification', output: String.name, default: '未知', special: {name: '分类', post: 'classify'}, order: true},
+                    {key: 'classification_probability', output: Number.name, default: NaN, special: {name: '分类', post: 'classify', span: 2}, order: true},
+                    {key: 'classification', output: String.name, default: '未知', special: {hide: true}, order: true},
                     {key: 'update_dt', output: Date.name, order: true},
                     {key: 'create_dt', output: Date.name, order: true}
                 ],
                 upload: true,
-                download: ['name', 'classification']
+                download: ['name', 'classification_probability', 'classification']
             }
         }
     };
@@ -69,7 +70,8 @@
         name: '名称',
         description: '描述',
         data: '数据',
-        classification: '分类',
+        classification_probability: '分类概率',
+        classification: '分类归一',
         create_dt: '创建时间',
         update_dt: '修改时间'
     };
@@ -238,8 +240,8 @@
                     promise(resolve => {
                         if (data.success && data.result.length) {
                             let ns = nd.session();
-                            Promise.all(data.result.map((item, index) => promise(resolve => {
-                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification='${classification_description[item]}',n.update_dt=${ Math.floor(Date.now() / 1000)}`).then(() => resolve())
+                            Promise.all(data.result.map(({probability, normalized}, index) => promise(resolve => {
+                                ns.run(`match (n) where id(n)=${identities[index]} set n.classification_probability=${probability},n.classification='${classification_description[normalized]}',n.update_dt=${ Math.floor(Date.now() / 1000)}`).then(() => resolve())
                             }))).then(() => {
                                 ns.close();
                                 resolve();

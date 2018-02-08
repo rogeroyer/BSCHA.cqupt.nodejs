@@ -431,25 +431,29 @@
                                 }).css({
                                     color: 'grey'
                                 }).tooltip().text('/^ ' + field.format + ' $/'));
-                                else if (field.special) $(th).append($('<button/>', {
-                                    type: 'button',
-                                    class: 'btn btn-primary btn-sm batch-process'
-                                }).text(field.special.name).click(e => {
-                                    helper.withChecked(identities => {
-                                        if (confirm('对所选的项' + field.special.name + '?')) {
-                                            $('#requesting_mask').show();
-                                            $.post('special/' + field.special.post, {
-                                                route: field.route,
-                                                identities: JSON.stringify(identities)
-                                            }, result => {
-                                                result = JSON.parse(result);
-                                                alert(result.message);
-                                                if (result.success) setTimeout(() => location.href = location.href, 300);
-                                                else $('#requesting_mask').hide();
-                                            });
-                                        }
-                                    });
-                                }));
+                                else if (field.special) {
+                                    if (field.special.span) $(th).attr('colspan', field.special.span);
+                                    else if (field.special.hide) setTimeout(() => $(th).remove(), 0);
+                                    $(th).append($('<button/>', {
+                                        type: 'button',
+                                        class: 'btn btn-primary btn-sm batch-process'
+                                    }).text(field.special.name).click(e => {
+                                        helper.withChecked(identities => {
+                                            if (confirm('对所选的项' + field.special.name + '?')) {
+                                                $('#requesting_mask').show();
+                                                $.post('special/' + field.special.post, {
+                                                    route: field.route,
+                                                    identities: JSON.stringify(identities)
+                                                }, result => {
+                                                    result = JSON.parse(result);
+                                                    alert(result.message);
+                                                    if (result.success) setTimeout(() => location.href = location.href, 300);
+                                                    else $('#requesting_mask').hide();
+                                                });
+                                            }
+                                        });
+                                    }));
+                                }
                             })),
                             $('<th/>').append($('<button/>', {
                                 class: 'btn btn-danger btn-sm batch-process'
@@ -546,14 +550,14 @@
                                         whiteSpace: 'nowrap'
                                     }).self(td => {
                                         let output = wrap(field.output),
-                                            value = record.properties[field.key] || '',
+                                            value = record.properties[field.key],
                                             text;
                                         switch (output[0]) {
                                             case Date.name:
                                                 text = new Date(value.low * 1000).toJSON().replace(/^[^\d]*(\d+)\-(\d+)\-(\d+)[^\d]*(\d+)\:(\d+)\:(\d+).*$/, '$1-$2-$3 $4:$5:$6');
                                                 break;
                                             case Number.name:
-                                                text = value.low;
+                                                text = (value && value.low) || 'NaN';
                                                 break;
                                             case String.name:
                                                 text = value.replace(/\n/g, '<br/>');
