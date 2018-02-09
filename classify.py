@@ -20,9 +20,6 @@ import re
 uri = "bolt://localhost"
 driver = GraphDatabase.driver(uri, auth=("bscha", "bscha"))
 
-
-
-
 def model_BayesianRidge(x_train,y_train,x_test,y_test):#93
     bst = BayesianRidge(n_iter=1000, tol=0.4, alpha_1=1e-04, alpha_2=1e-06, lambda_1=1e-04, lambda_2=1e-06, 
                         compute_score=False, fit_intercept=True, normalize=False, copy_X=True, verbose=False).fit(x_train,y_train)
@@ -61,6 +58,8 @@ def creat_train_set():
             all_data = pd.DataFrame(ALL_feature)
             if all_data.shape[0]==0:
                 raise 'No Train Data'
+            if ((sum(labels) == len(labels)) | (sum(labels) == 0)):
+                raise 'Add species,plz'
             all_data = pd.concat([pd.DataFrame(labels),all_data],axis=1,ignore_index=True)
             all_data = all_data.fillna(all_data.mean())
     
