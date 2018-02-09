@@ -59,7 +59,12 @@ def creat_train_set():
             if all_data.shape[0]==0:
                 raise 'No Train Data'
             if ((sum(labels) == len(labels)) | (sum(labels) == 0)):
-                raise '目前数据库只有一个物种，请上传多个物种！'
+                
+                return_json = {}
+                return_json["success"]=False
+                return_json["message"]="目前数据库只有一个物种，请上传多个物种！"
+                print(return_json)
+                sys.exit(33)
             all_data = pd.concat([pd.DataFrame(labels),all_data],axis=1,ignore_index=True)
             all_data = all_data.fillna(all_data.mean())
     
