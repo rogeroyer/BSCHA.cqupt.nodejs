@@ -62,7 +62,7 @@ def creat_train_set():
                 
                 return_json = {}
                 return_json["success"]=False
-                return_json["message"]="目前数据库只有一个物种，请上传多个物种！"
+                return_json["message"]="分类失败：目前数据库只有一个物种，请上传多个物种！"
                 print(json.dumps(return_json))
                 return -1
             all_data = pd.concat([pd.DataFrame(labels),all_data],axis=1,ignore_index=True)
@@ -203,7 +203,7 @@ if __name__ == '__main__':
         
         return_json = {}
         return_json["success"]=True
-        return_json["message"]="分类完成"
+        return_json["message"]="分类成功"
         return_json["result"]=json_ans
         return_json = json.dumps(return_json)
         print(return_json)
