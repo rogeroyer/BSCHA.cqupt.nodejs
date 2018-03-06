@@ -142,7 +142,7 @@ def creat_test_set(test_id):
                 check_one_sample = sorted(check_one_sample.items()) 
                 for key_value in check_one_sample:
                     tmp_dict.append(key_value[1])
-                record_id = data['id(n)']
+                record_id = str(data['id(n)'])
                 if len(tmp_dict)<700:
                     continue_list.append(record_id)
                     continue
