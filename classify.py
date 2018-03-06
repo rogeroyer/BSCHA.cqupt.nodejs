@@ -125,29 +125,52 @@ def creat_test_set(test_id):
             file_name = []
             continue_list = []
 #            print(test_id)
-            for record in tx.run("match (n) where id(n) in "+test_id+" return n"):
-#                print(record)
-                pattern = re.compile(r'data\': .+?\'')
-                data = pattern.search(str(record.values()[0])).group(0)[len('data\': \''):-1]
-                pattern_id = re.compile(r'Node id=\d+? ')
-                record_id = pattern_id.search(str(record.values()[0])).group(0)
-                record_id=record_id[len('Node id='):-1]
+            
+#            print([record for record in tx.run("match (:class{name:'applying'})-[]->(n:instance) where id(n) in "+test_id+" return n.data")][0].data()['n.data'])
 
+            for record in tx.run("match (:class{name:'applying'})-[]->(n:instance) where id(n) in "+test_id+" return n.data,id(n)"):
+                data=record.data()
+                one_sample = data['n.data']
                 tmp_dict = []
                 check_one_sample = dict()
-                for index,line in enumerate(data.strip('\\r\\n').split('\\r\\n')):
-                    flag_key = float(line.strip().split('\\t')[0].replace(',','.'))
-                    if (flag_key<401) | (flag_key>=1778) | ('\\t' not in line):
+                for index,line in enumerate(one_sample.strip('\r\n').split('\r\n')):
+#                    print(line)
+                    flag_key = float(line.strip().split('\t')[0].replace(',','.'))
+                    if (flag_key<401) | (flag_key>=1778) | ('\t' not in line):
                         continue
-                    check_one_sample[float(line.strip().split('\\t')[0].replace(',','.'))] = float(line.strip().split('\\t')[1].replace(',','.'))
+                    check_one_sample[float(line.strip().split('\t')[0].replace(',','.'))] = float(line.strip().split('\t')[1].replace(',','.'))
                 check_one_sample = sorted(check_one_sample.items()) 
                 for key_value in check_one_sample:
                     tmp_dict.append(key_value[1])
+                record_id = data['id(n)']
                 if len(tmp_dict)<700:
                     continue_list.append(record_id)
                     continue
                 ALL_feature.append(tmp_dict)
                 file_name.append(record_id)
+#            for record in tx.run("match (n) where id(n) in "+test_id+" return n"):                
+##                print(record.data)
+#                pattern = re.compile(r'data\': .+?\'')
+#                data = pattern.search(str(record.values()[0])).group(0)[len('data\': \''):-1]
+#                pattern_id = re.compile(r'Node id=\d+? ')
+#                record_id = pattern_id.search(str(record.values()[0])).group(0)
+#                record_id=record_id[len('Node id='):-1]
+#
+#                tmp_dict = []
+#                check_one_sample = dict()
+#                for index,line in enumerate(data.strip('\\r\\n').split('\\r\\n')):
+#                    flag_key = float(line.strip().split('\\t')[0].replace(',','.'))
+#                    if (flag_key<401) | (flag_key>=1778) | ('\\t' not in line):
+#                        continue
+#                    check_one_sample[float(line.strip().split('\\t')[0].replace(',','.'))] = float(line.strip().split('\\t')[1].replace(',','.'))
+#                check_one_sample = sorted(check_one_sample.items()) 
+#                for key_value in check_one_sample:
+#                    tmp_dict.append(key_value[1])
+#                if len(tmp_dict)<700:
+#                    continue_list.append(record_id)
+#                    continue
+#                ALL_feature.append(tmp_dict)
+#                file_name.append(record_id)
             test_data = pd.DataFrame(ALL_feature)
             if test_data.shape[0]==0:
                 raise 'No Test Data'
@@ -207,7 +230,7 @@ if __name__ == '__main__':
     if type(rtn) == type([]):
         train_data,label,all_data = rtn[0],rtn[1],rtn[2]
         test_list = sys.argv[1]
-#        test_list =  "[3795]"
+#        test_list =  "[3915,3924]"
     #    key = "match (n) where id(n) in "+str(test_list)+" return n.id,n.data"
     #    key = "match (n) where id(n) in [2080,2081] return n.id,n.data"
         test_data,file_name,continue_list = creat_test_set(test_list)
