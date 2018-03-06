@@ -167,10 +167,35 @@ def model_G(train_data,label,test_data,test_remain_file_name):
     scaler_x_test = scaler.transform(test_data)
     
     predict = model_BayesianRidge(scaler_train_data,label,scaler_x_test,None)
+    #%%
+    predict_bak = pd.Series(predict).copy()
+    predict_bak_sort_list  = list(predict_bak.sort_values(ascending=False))
+    mean_top5 = np.mean(predict_bak_sort_list[:5])
+    my_thre = mean_top5*0.56
+#    print('thre = ',my_thre)
+    if my_thre <0.65:
+        my_thre = 0.65
+    if my_thre >0.7:
+        my_thre = 0.7
+#    print(len(predict_bak))
+    predict_bak_plus = predict_bak[(predict_bak<my_thre+0.1) & (predict_bak>my_thre)]
+    predict_bak_sub = predict_bak[(predict_bak<my_thre) & (predict_bak>my_thre-0.1)]
+    if ((len(predict_bak_plus)==0) | (len(predict_bak_sub)==0)):
+        my_thre = my_thre
+    else:
+        if len(predict_bak_plus)>len(predict_bak_sub):
+            my_thre = my_thre - 0.1*(len(predict_bak_plus)-len(predict_bak_sub))/len(predict_bak_plus)
+        elif len(predict_bak_plus)<len(predict_bak_sub):
+            my_thre = my_thre + 0.1*(len(predict_bak_sub)-len(predict_bak_plus))/len(predict_bak_sub)
+        else:
+            my_thre = my_thre
+#    print('thre = ',my_thre)
+#    vfunc = np.vectorize(lambda x:1 if x>=my_thre else 0)
+    #%%
     anss = pd.DataFrame()
     anss['file'] = test_remain_file_name
     anss['pro'] = predict
-    anss['label'] = anss['pro'].map(lambda x:True if x>0.8 else False)
+    anss['label'] = anss['pro'].map(lambda x:True if x>my_thre else False)
 #    anss.to_csv('read_test.csv',index=None)
     return anss
     
