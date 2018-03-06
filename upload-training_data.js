@@ -38,7 +38,13 @@
                     if (invalid === undefined) {
                         for (let [species_dir, species_path] of pack) {
                             tree.push({name: species_dir});
-                            let species = fs.readdirSync(species_path).map(sample_file => [sample_file, species_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isFile() && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
+                            let collect = species_path => fs.readdirSync(species_path).map(sample_file => [sample_file, species_path + '\\' + sample_file]).reduce((acc, [sample_file, sample_path]) => do {
+                                if (fs.statSync(sample_path).isFile()) {
+                                    if (/.*\.txt/.test(sample_file)) acc.push([sample_file, sample_path]);
+                                } else acc.splice(acc.length, 0, ...collect(sample_path));
+                                acc;
+                            }, []);
+                            let species = collect(species_path),//fs.readdirSync(species_path).map(sample_file => [sample_file, species_path + '\\' + sample_file]).filter(([sample_file, sample_path]) => (fs.statSync(sample_path).isFile() && /.*\.txt/.test(sample_file))).map(([sample_file, sample_path]) => [sample_file.replace(/^(.+)\.txt$/, '$1'), sample_path]),
                                 invalid = species.find(([sample_file,]) => !training_patterns.name.test(sample_file));
                             if (invalid === undefined) {
                                 species = species.map(([sample_file, sample_path]) => [sample_file, sample_path, fs.readFileSync(sample_path, 'utf-8')]);
