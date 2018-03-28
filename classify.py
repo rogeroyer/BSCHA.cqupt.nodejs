@@ -194,12 +194,12 @@ def model_G(train_data,label,test_data,test_remain_file_name):
     predict_bak = pd.Series(predict).copy()
     predict_bak_sort_list  = list(predict_bak.sort_values(ascending=False))
     mean_top5 = np.mean(predict_bak_sort_list[:5])
-    my_thre = mean_top5*0.56
+    my_thre = mean_top5*0.42
 #    print('thre = ',my_thre)
-    if my_thre <0.65:
-        my_thre = 0.65
-    if my_thre >0.7:
-        my_thre = 0.7
+    if my_thre <0.5:
+        my_thre = 0.5
+    if my_thre >0.55:
+        my_thre = 0.55
 #    print(len(predict_bak))
     predict_bak_plus = predict_bak[(predict_bak<my_thre+0.1) & (predict_bak>my_thre)]
     predict_bak_sub = predict_bak[(predict_bak<my_thre) & (predict_bak>my_thre-0.1)]
